@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { BookOpenText, Palette, BookOpen, Wand2, UtensilsCrossed, Lock, Check, Sparkles, Sticker, GraduationCap } from 'lucide-react';
+import { BookOpenText, Palette, BookOpen, Wand2, UtensilsCrossed, Lock, Check, Sparkles, Sticker, GraduationCap, ShoppingCart } from 'lucide-react';
 import { useLang } from '@/contexts/LanguageContext';
 import { toast } from '@/hooks/use-toast';
 import KidsStories from '@/components/KidsStories';
@@ -10,7 +10,7 @@ import RecipesCare from '@/components/RecipesCare';
 import MakeWebhookForm from '@/components/MakeWebhookForm';
 import StickerStore from '@/components/StickerStore';
 import QuizEngine from '@/components/QuizEngine';
-import ContactAdmin from '@/components/ContactAdmin';
+import CombinedOrderForm from '@/components/CombinedOrderForm';
 import PersonalityQuizzes from '@/components/PersonalityQuizzes';
 
 interface ServicesPageProps {
@@ -37,8 +37,8 @@ const services: ServiceCard[] = [
   { id: 'recipes', icon: UtensilsCrossed, nameAr: 'وصفات وعناية', nameEn: 'Recipes & Care', cost: 2, color: 'from-emerald-400 to-green-500' },
   { id: 'stickers', icon: Sticker, nameAr: 'متجر الملصقات', nameEn: 'Sticker Store', cost: 0, color: 'from-fuchsia-400 to-pink-500' },
   { id: 'aitools', icon: Wand2, nameAr: 'أدوات الذكاء الاصطناعي', nameEn: 'AI Image Tool', cost: 0, color: 'from-indigo-400 to-blue-500' },
-  { id: 'quiz', icon: GraduationCap, nameAr: 'محرك الاختبارات', nameEn: 'Quiz Engine', cost: 0, color: 'from-fuchsia-500 to-purple-700' },
-  { id: 'personalityquizzes', icon: Sparkles, nameAr: 'اختبارات الشخصية', nameEn: 'Personality Quizzes', cost: 1, color: 'from-purple-500 to-pink-600' },
+  { id: 'quiz', icon: GraduationCap, nameAr: 'محرك الاختبارات', nameEn: 'Quiz Engine', cost: 20, color: 'from-fuchsia-500 to-purple-700' },
+  { id: 'personalityquizzes', icon: Sparkles, nameAr: 'اختبارات الشخصية', nameEn: 'Personality Quizzes', cost: 20, color: 'from-purple-500 to-pink-600' },
   { id: 'contact', icon: Sparkles, nameAr: 'مراسلة المسؤولة (مجاني)', nameEn: 'Contact Admin (Free)', cost: 0, color: 'from-emerald-500 to-teal-600' },
 ];
 
@@ -46,10 +46,10 @@ const ServicesPage = ({ points, addPoints }: ServicesPageProps) => {
   const { t, lang } = useLang();
   const [unlocked, setUnlocked] = useState<string[]>(() => {
     try {
-      const stored = JSON.parse(localStorage.getItem(UNLOCKED_KEY) || '["quotes","aitools","carescape","quiz","coloring","stickers"]');
+      const stored = JSON.parse(localStorage.getItem(UNLOCKED_KEY) || '["quotes","aitools","carescape","coloring","stickers"]');
       return stored;
     } catch {
-      return ['quotes', 'aitools', 'carescape', 'quiz', 'coloring', 'stickers'];
+      return ['quotes', 'aitools', 'carescape', 'coloring', 'stickers'];
     }
   });
   const [activeService, setActiveService] = useState<string | null>(null);
@@ -89,7 +89,7 @@ const ServicesPage = ({ points, addPoints }: ServicesPageProps) => {
         case 'aitools': return <MakeWebhookForm />;
         case 'quiz': return <QuizEngine onScore={addPoints} />;
         case 'personalityquizzes': return <PersonalityQuizzes />;
-        case 'contact': return <ContactAdmin />;
+        case 'contact': return <CombinedOrderForm onClose={() => setActiveService(null)} lang={lang} hideOffers={true} />;
         default: return null;
       }
     };

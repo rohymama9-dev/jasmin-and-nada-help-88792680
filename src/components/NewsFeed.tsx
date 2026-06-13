@@ -59,29 +59,85 @@ const NewsFeed = ({ onPoints }: NewsFeedProps) => {
     const load = async () => {
       setLoading(true); setError(null);
       try {
-        const url = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/fetch-news?category=${cat}&range=${range}&lang=${lang}`;
-        const { data: { session } } = await supabase.auth.getSession();
+        const GNEWS_KEY = "11da12c8c08db9d912fe59c560f651f5";
         
+        const TOPIC_MAP: Record<string, string> = {
+          all: "breaking-news", sports: "sports", tech: "technology",
+          politics: "world", science: "science", health: "health",
+        };
+        const CELEB_Q: Record<string, string> = {
+          ar: "مشاهير OR فنانين OR نجوم", en: "celebrity OR celebrities OR Hollywood OR star",
+        };
+        const SEARCH_Q_AR: Record<string, string> = {
+          all: "أخبار", sports: "رياضة", tech: "تقنية OR تكنولوجيا",
+          politics: "سياسة", science: "علوم", health: "صحة",
+        };
+        const SEARCH_Q_EN: Record<string, string> = {
+          all: "news", sports: "sports", tech: "technology",
+          politics: "politics", science: "science", health: "health",
+        };
+        const LANG_MAP: Record<string, { lang: string; country: string }> = {
+          ar: { lang: "ar", country: "eg" }, en: { lang: "en", country: "us" },
+        };
+
+        const { lang: apiLang, country } = LANG_MAP[lang] || LANG_MAP.en;
+        
+        let api: string;
+        if (cat === "celebrity" || range === "today" || range === "week") {
+          const days = range === "week" ? 7 : 1;
+          const from = new Date(Date.now() - days * 24 * 60 * 60 * 1000).toISOString();
+          const q = cat === "celebrity"
+            ? (CELEB_Q[apiLang] || CELEB_Q.en)
+            : (apiLang === "ar" ? (SEARCH_Q_AR[cat] || SEARCH_Q_AR.all) : (SEARCH_Q_EN[cat] || SEARCH_Q_EN.all));
+          api = `https://gnews.io/api/v4/search?q=${encodeURIComponent(q)}&lang=${apiLang}&country=${country}&from=${from}&sortby=publishedAt&max=20&apikey=${GNEWS_KEY}`;
+        } else {
+          const topic = TOPIC_MAP[cat] || "breaking-news";
+          api = `https://gnews.io/api/v4/top-headlines?topic=${topic}&lang=${apiLang}&country=${country}&max=20&apikey=${GNEWS_KEY}`;
+        }
+
         const controller = new AbortController();
         const timeoutId = setTimeout(() => controller.abort(), 8000);
 
-        const res = await fetch(url, {
-          headers: {
-            apikey: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
-            Authorization: `Bearer ${session?.access_token ?? import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
-          },
-          signal: controller.signal
-        });
+        // Use corsproxy.io CORS proxy to bypass browser restrictions
+        const proxyUrl = `https://corsproxy.io/?${encodeURIComponent(api)}`;
+        const res = await fetch(proxyUrl, { signal: controller.signal });
         clearTimeout(timeoutId);
 
-        const json = await res.json().catch(() => ({ articles: [] }));
         if (!active) return;
-        if (!res.ok) throw new Error(json.error || 'Failed');
-        setArticles(json.articles || []);
+        if (!res.ok) throw new Error('Proxy Failed');
+        
+        // Parse the actual response contents from the proxy
+        const json = await res.json();
+        if (json.errors) throw new Error(json.errors[0]);
+
+        // Deduplicate
+        const seenUrl = new Set<string>();
+        const seenTitle = new Set<string>();
+        const finalArticles: Article[] = [];
+        for (const a of (json.articles || [])) {
+          const articleUrl = (a.url || "").trim();
+          const titleKey = (a.title || "").toLowerCase().replace(/\s+/g, " ").trim().slice(0, 120);
+          if (!articleUrl && !titleKey) continue;
+          if (articleUrl && seenUrl.has(articleUrl)) continue;
+          if (titleKey && seenTitle.has(titleKey)) continue;
+          if (articleUrl) seenUrl.add(articleUrl);
+          if (titleKey) seenTitle.add(titleKey);
+          finalArticles.push({
+            id: `${a.publishedAt || ""}-${articleUrl.slice(-16) || titleKey.slice(0, 16)}`,
+            title: a.title || "",
+            description: a.description || "",
+            content: a.content || "",
+            url: articleUrl,
+            image: a.image || "",
+            publishedAt: a.publishedAt || "",
+            source: a.source?.name || "",
+          });
+        }
+        
+        setArticles(finalArticles);
       } catch (e: any) {
         if (!active) return;
         console.error('[NewsFeed] Error fetching news:', e);
-        // Handle network errors (like net::ERR_NAME_NOT_RESOLVED) silently or with a user-friendly msg
         setError(lang === 'ar' ? 'عذراً، تعذر الاتصال بخدمة الأخبار' : 'Sorry, could not connect to news service');
         setArticles([]);
       } finally {

@@ -16,15 +16,15 @@ type Drawing = {
 };
 
 const drawings: Drawing[] = [
-  { id: 'img1', nameAr: 'رسمة 1', nameEn: 'Drawing 1', emoji: '🎨', source: 'builtin', imageUrl: '/images/coloring studio/c1.png' },
-  { id: 'img2', nameAr: 'رسمة 2', nameEn: 'Drawing 2', emoji: '🎨', source: 'builtin', imageUrl: '/images/coloring studio/c2.png' },
-  { id: 'img3', nameAr: 'رسمة 3', nameEn: 'Drawing 3', emoji: '🎨', source: 'builtin', imageUrl: '/images/coloring studio/c3.png' },
-  { id: 'img4', nameAr: 'رسمة 4', nameEn: 'Drawing 4', emoji: '🎨', source: 'builtin', imageUrl: '/images/coloring studio/c4.png' },
-  { id: 'img5', nameAr: 'رسمة 5', nameEn: 'Drawing 5', emoji: '🎨', source: 'builtin', imageUrl: '/images/coloring studio/c5.png' },
-  { id: 'img6', nameAr: 'رسمة 6', nameEn: 'Drawing 6', emoji: '🎨', source: 'builtin', imageUrl: '/images/coloring studio/c6.png' },
-  { id: 'img7', nameAr: 'رسمة 7', nameEn: 'Drawing 7', emoji: '🎨', source: 'builtin', imageUrl: '/images/coloring studio/c7.png' },
-  { id: 'img8', nameAr: 'رسمة 8', nameEn: 'Drawing 8', emoji: '🎨', source: 'builtin', imageUrl: '/images/coloring studio/c8.png' },
-  { id: 'img9', nameAr: 'رسمة 9', nameEn: 'Drawing 9', emoji: '🎨', source: 'builtin', imageUrl: '/images/coloring studio/c9.png' }
+  { id: 'img1', nameAr: 'رسمة 1', nameEn: 'Drawing 1', emoji: '🎨', source: 'builtin', imageUrl: '/images/coloring-studio/c1.png' },
+  { id: 'img2', nameAr: 'رسمة 2', nameEn: 'Drawing 2', emoji: '🎨', source: 'builtin', imageUrl: '/images/coloring-studio/c2.png' },
+  { id: 'img3', nameAr: 'رسمة 3', nameEn: 'Drawing 3', emoji: '🎨', source: 'builtin', imageUrl: '/images/coloring-studio/c3.png' },
+  { id: 'img4', nameAr: 'رسمة 4', nameEn: 'Drawing 4', emoji: '🎨', source: 'builtin', imageUrl: '/images/coloring-studio/c4.png' },
+  { id: 'img5', nameAr: 'رسمة 5', nameEn: 'Drawing 5', emoji: '🎨', source: 'builtin', imageUrl: '/images/coloring-studio/c5.png' },
+  { id: 'img6', nameAr: 'رسمة 6', nameEn: 'Drawing 6', emoji: '🎨', source: 'builtin', imageUrl: '/images/coloring-studio/c6.png' },
+  { id: 'img7', nameAr: 'رسمة 7', nameEn: 'Drawing 7', emoji: '🎨', source: 'builtin', imageUrl: '/images/coloring-studio/c7.png' },
+  { id: 'img8', nameAr: 'رسمة 8', nameEn: 'Drawing 8', emoji: '🎨', source: 'builtin', imageUrl: '/images/coloring-studio/c8.png' },
+  { id: 'img9', nameAr: 'رسمة 9', nameEn: 'Drawing 9', emoji: '🎨', source: 'builtin', imageUrl: '/images/coloring-studio/c9.png' }
 ];
 
 const COLORS = [

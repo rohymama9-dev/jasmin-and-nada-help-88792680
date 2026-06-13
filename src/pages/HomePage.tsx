@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
-import { LogOut } from 'lucide-react';
+import { LogOut, Moon, Sun } from 'lucide-react';
 import { useLang } from '@/contexts/LanguageContext';
+import { useTheme } from '@/contexts/ThemeContext';
 import { supabase } from '@/integrations/supabase/client';
 import { getGuestName, GUEST_NAME_KEY } from '@/components/OnboardingScreen';
 import PointsBadge from '@/components/PointsBadge';
@@ -21,6 +22,7 @@ interface HomePageProps {
 
 const HomePage = ({ points, addPoints }: HomePageProps) => {
   const { t, lang, toggleLang } = useLang();
+  const { theme, toggleTheme } = useTheme();
   const [name, setName] = useState<string>(() => getGuestName());
 
   useEffect(() => {
@@ -47,6 +49,11 @@ const HomePage = ({ points, addPoints }: HomePageProps) => {
               <p className="text-sm text-muted-foreground">{t('dailyProgress')}</p>
             </div>
             <div className="flex items-center gap-2">
+              <button onClick={toggleTheme}
+                aria-label="Toggle Theme"
+                className="p-1.5 rounded-full bg-secondary text-secondary-foreground hover:bg-secondary/80 transition-colors">
+                {theme === 'dark' ? <Sun size={14} /> : <Moon size={14} />}
+              </button>
               <button onClick={toggleLang}
                 className="px-3 py-1.5 rounded-full bg-secondary text-secondary-foreground text-xs font-semibold hover:bg-secondary/80 transition-colors">
                 {lang === 'ar' ? 'EN' : 'عربي'}

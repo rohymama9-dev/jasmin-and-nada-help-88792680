@@ -190,11 +190,45 @@ const POINT_GATE = 100;
 const GamesPage = ({ points, gamePoints, addPoints }: GamesPageProps) => {
   const { t, lang } = useLang();
   const [activeGame, setActiveGame] = useState<string | null>(null);
+  const [unlocked, setUnlocked] = useState<boolean>(() => localStorage.getItem('games-unlocked-v1') === '1');
+  
   const internal: Difficulty = 'intermediate';
   const awardGameOutcome = (result: number | boolean = true) => {
     const isPositive = typeof result === 'boolean' ? result : result > 0;
     addPoints(isPositive ? 2 : 1);
   };
+
+  const handleUnlock = () => {
+    if (points < 20) {
+      alert(lang === 'ar' ? 'تحتاجين إلى ٢٠ نقطة على الأقل لفتح الألعاب' : 'Need at least 20 points to unlock games');
+      return;
+    }
+    addPoints(-20);
+    setUnlocked(true);
+    localStorage.setItem('games-unlocked-v1', '1');
+  };
+
+  if (!unlocked) {
+    return (
+      <div className="glass-card rounded-2xl p-6 text-center space-y-4 max-w-sm mx-auto mt-10">
+        <div className="w-16 h-16 mx-auto rounded-2xl bg-gradient-to-br from-indigo-500 to-fuchsia-500 flex items-center justify-center">
+          <Gamepad2 className="text-white" size={32} />
+        </div>
+        <h3 className="font-extrabold text-lg">{lang === 'ar' ? 'مركز الألعاب' : 'Gaming Center'}</h3>
+        <p className="text-sm text-muted-foreground">
+          {lang === 'ar' ? `افتحي جميع الألعاب بـ 20 نقطة فقط لمرة واحدة.` : `Unlock all games for 20 points (one-time).`}
+        </p>
+        <div className="flex items-center justify-center gap-2">
+           <span className="text-2xl font-black text-primary">20 {lang === 'ar' ? 'نقطة' : 'pts'}</span>
+        </div>
+        <p className="text-xs">{lang === 'ar' ? `رصيدك: ${points}` : `Balance: ${points}`}</p>
+        <button onClick={handleUnlock} disabled={points < 20}
+          className="w-full py-3 rounded-xl gradient-primary text-primary-foreground font-bold disabled:opacity-50">
+          🔓 {lang === 'ar' ? `افتحي بـ 20 نقطة` : `Unlock for 20 pts`}
+        </button>
+      </div>
+    );
+  }
 
   if (activeGame) {
     const game = games.find(g => g.id === activeGame);

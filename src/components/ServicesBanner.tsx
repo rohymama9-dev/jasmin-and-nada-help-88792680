@@ -94,8 +94,8 @@ const ServicesBanner = () => {
       </div>
       <p className="text-[10px] leading-relaxed text-white/90">
         {lang === 'ar'
-          ? 'لطلب الخدمة افتحي أداة "أدوات الذكاء الاصطناعي" داخل قسم الخدمات (تتطلب ٥٠٠ نقطة).'
-          : 'To order, open the "Text → Image" tool inside Services (requires 500 points).'}
+          ? 'لطلب الخدمة افتحي أداة "أدوات الذكاء الاصطناعي" داخل قسم الخدمات (تتطلب ١٠٠ نقطة).'
+          : 'To order, open the "AI Tools" tool inside Services (requires 100 points).'}
       </p>
     </div>
   );

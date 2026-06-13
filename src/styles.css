@@ -129,6 +129,55 @@
   --sidebar-ring: 217.2 91.2% 59.8%;
 }
 
+/* ── Dark mode ────────────────────────────────────── */
+.dark {
+  --background: 240 10% 10%;
+  --foreground: 0 0% 100%;
+
+  --card: 240 10% 14%;
+  --card-foreground: 0 0% 100%;
+
+  --popover: 240 10% 14%;
+  --popover-foreground: 0 0% 100%;
+
+  --primary: 340 60% 70%;
+  --primary-foreground: 0 0% 100%;
+
+  --secondary: 240 8% 20%;
+  --secondary-foreground: 340 15% 80%;
+
+  --muted: 240 8% 18%;
+  --muted-foreground: 340 10% 55%;
+
+  --accent: 340 50% 65%;
+  --accent-foreground: 0 0% 100%;
+
+  --destructive: 0 70% 55%;
+  --destructive-foreground: 0 0% 100%;
+
+  --border: 240 8% 22%;
+  --input: 240 8% 22%;
+  --ring: 340 60% 70%;
+
+  --gold: 38 70% 60%;
+  --gold-foreground: 38 80% 15%;
+  --success: 152 55% 50%;
+  --success-foreground: 0 0% 100%;
+
+  --gaming: 265 60% 65%;
+  --gaming-foreground: 0 0% 100%;
+  --gaming-glow: 265 80% 75%;
+
+  --sidebar-background: 240 10% 12%;
+  --sidebar-foreground: 340 15% 80%;
+  --sidebar-primary: 340 60% 70%;
+  --sidebar-primary-foreground: 0 0% 100%;
+  --sidebar-accent: 240 8% 18%;
+  --sidebar-accent-foreground: 340 15% 80%;
+  --sidebar-border: 240 8% 22%;
+  --sidebar-ring: 340 60% 70%;
+}
+
 @layer base {
   * { border-color: hsl(var(--border)); }
   body {
