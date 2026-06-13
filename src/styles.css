@@ -1,0 +1,160 @@
+@import url('https://fonts.googleapis.com/css2?family=Cairo:wght@300;400;500;600;700&family=Poppins:wght@300;400;500;600;700&display=swap');
+
+@import "tailwindcss" source(none);
+@source "../src";
+@import "tw-animate-css";
+
+@custom-variant dark (&:is(.dark *));
+
+/*
+ * Bridges the Bloom Learn Hub design system (HSL tokens, hsl(var(--token)))
+ * onto Tailwind v4. All semantic colors below are wrapped in hsl(...) so
+ * Tailwind utilities like bg-primary, text-foreground work exactly like v3.
+ */
+
+@theme inline {
+  --font-poppins: 'Poppins', sans-serif;
+  --font-cairo: 'Cairo', sans-serif;
+
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
+
+  --color-background: hsl(var(--background));
+  --color-foreground: hsl(var(--foreground));
+  --color-card: hsl(var(--card));
+  --color-card-foreground: hsl(var(--card-foreground));
+  --color-popover: hsl(var(--popover));
+  --color-popover-foreground: hsl(var(--popover-foreground));
+  --color-primary: hsl(var(--primary));
+  --color-primary-foreground: hsl(var(--primary-foreground));
+  --color-secondary: hsl(var(--secondary));
+  --color-secondary-foreground: hsl(var(--secondary-foreground));
+  --color-muted: hsl(var(--muted));
+  --color-muted-foreground: hsl(var(--muted-foreground));
+  --color-accent: hsl(var(--accent));
+  --color-accent-foreground: hsl(var(--accent-foreground));
+  --color-destructive: hsl(var(--destructive));
+  --color-destructive-foreground: hsl(var(--destructive-foreground));
+  --color-border: hsl(var(--border));
+  --color-input: hsl(var(--input));
+  --color-ring: hsl(var(--ring));
+  --color-ring-offset-background: hsl(var(--background));
+
+  --color-gold: hsl(var(--gold));
+  --color-gold-foreground: hsl(var(--gold-foreground));
+  --color-success: hsl(var(--success));
+  --color-success-foreground: hsl(var(--success-foreground));
+
+  --color-gaming: hsl(var(--gaming));
+  --color-gaming-foreground: hsl(var(--gaming-foreground));
+  --color-gaming-glow: hsl(var(--gaming-glow));
+
+  --color-sidebar: hsl(var(--sidebar-background));
+  --color-sidebar-foreground: hsl(var(--sidebar-foreground));
+  --color-sidebar-primary: hsl(var(--sidebar-primary));
+  --color-sidebar-primary-foreground: hsl(var(--sidebar-primary-foreground));
+  --color-sidebar-accent: hsl(var(--sidebar-accent));
+  --color-sidebar-accent-foreground: hsl(var(--sidebar-accent-foreground));
+  --color-sidebar-border: hsl(var(--sidebar-border));
+  --color-sidebar-ring: hsl(var(--sidebar-ring));
+
+  --animate-pulse-soft: pulse-soft 2s ease-in-out infinite;
+  --animate-bounce-in: bounce-in 0.5s ease-out;
+  --animate-slide-up: slide-up 0.4s ease-out;
+}
+
+@keyframes pulse-soft {
+  0%, 100% { opacity: 1; }
+  50%      { opacity: 0.7; }
+}
+@keyframes bounce-in {
+  0%   { transform: scale(0.3); opacity: 0; }
+  50%  { transform: scale(1.05); }
+  70%  { transform: scale(0.9); }
+  100% { transform: scale(1); opacity: 1; }
+}
+@keyframes slide-up {
+  0%   { transform: translateY(20px); opacity: 0; }
+  100% { transform: translateY(0); opacity: 1; }
+}
+
+:root {
+  --background: 350 30% 97%;
+  --foreground: 340 20% 20%;
+
+  --card: 350 40% 98%;
+  --card-foreground: 340 20% 20%;
+
+  --popover: 350 40% 98%;
+  --popover-foreground: 340 20% 20%;
+
+  --primary: 340 60% 65%;
+  --primary-foreground: 0 0% 100%;
+
+  --secondary: 350 35% 92%;
+  --secondary-foreground: 340 20% 25%;
+
+  --muted: 350 20% 94%;
+  --muted-foreground: 340 10% 50%;
+
+  --accent: 340 50% 75%;
+  --accent-foreground: 0 0% 100%;
+
+  --destructive: 0 84.2% 60.2%;
+  --destructive-foreground: 210 40% 98%;
+
+  --border: 340 25% 88%;
+  --input: 340 25% 88%;
+  --ring: 340 60% 65%;
+
+  --radius: 1rem;
+
+  --gold: 38 70% 55%;
+  --gold-foreground: 38 80% 20%;
+  --success: 152 55% 50%;
+  --success-foreground: 0 0% 100%;
+
+  --gaming: 265 60% 55%;
+  --gaming-foreground: 0 0% 100%;
+  --gaming-glow: 265 80% 70%;
+
+  --sidebar-background: 0 0% 98%;
+  --sidebar-foreground: 240 5.3% 26.1%;
+  --sidebar-primary: 240 5.9% 10%;
+  --sidebar-primary-foreground: 0 0% 98%;
+  --sidebar-accent: 240 4.8% 95.9%;
+  --sidebar-accent-foreground: 240 5.9% 10%;
+  --sidebar-border: 220 13% 91%;
+  --sidebar-ring: 217.2 91.2% 59.8%;
+}
+
+@layer base {
+  * { border-color: hsl(var(--border)); }
+  body {
+    background-color: hsl(var(--background));
+    color: hsl(var(--foreground));
+    font-family: 'Poppins', sans-serif;
+  }
+  [dir="rtl"] body, [dir="rtl"] { font-family: 'Cairo', sans-serif; }
+}
+
+@layer utilities {
+  .glass-card {
+    background-color: hsl(var(--card) / 0.8);
+    backdrop-filter: blur(16px);
+    border: 1px solid hsl(var(--border) / 0.5);
+    box-shadow: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
+  }
+  .gradient-primary { background: linear-gradient(135deg, hsl(var(--primary)), hsl(var(--accent))); }
+  .gradient-gold    { background: linear-gradient(135deg, hsl(var(--gold)), hsl(38 80% 65%)); }
+  .gradient-gaming  { background: linear-gradient(135deg, hsl(var(--gaming)), hsl(var(--gaming-glow))); }
+  .gradient-success { background: linear-gradient(135deg, hsl(var(--success)), hsl(160 55% 45%)); }
+  .text-gradient {
+    background: linear-gradient(135deg, hsl(var(--primary)), hsl(var(--accent)));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+  }
+  .text-gold { color: hsl(var(--gold)); }
+}
