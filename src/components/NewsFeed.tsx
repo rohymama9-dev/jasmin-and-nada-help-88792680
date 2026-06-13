@@ -98,15 +98,14 @@ const NewsFeed = ({ onPoints }: NewsFeedProps) => {
         const controller = new AbortController();
         const timeoutId = setTimeout(() => controller.abort(), 8000);
 
-        // Use corsproxy.io CORS proxy to bypass browser restrictions
-        const proxyUrl = `https://corsproxy.io/?${encodeURIComponent(api)}`;
-        const res = await fetch(proxyUrl, { signal: controller.signal });
+        // Fetch directly from GNews API (it supports CORS natively, proxies block Netlify/Vercel)
+        const res = await fetch(api, { signal: controller.signal });
         clearTimeout(timeoutId);
 
         if (!active) return;
-        if (!res.ok) throw new Error('Proxy Failed');
+        if (!res.ok) throw new Error('API Request Failed');
         
-        // Parse the actual response contents from the proxy
+        // Parse the actual response
         const json = await res.json();
         if (json.errors) throw new Error(json.errors[0]);
 
