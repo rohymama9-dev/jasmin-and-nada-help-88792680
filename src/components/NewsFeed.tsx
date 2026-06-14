@@ -101,9 +101,21 @@ const NewsFeed = ({ onPoints }: NewsFeedProps) => {
         clearTimeout(timeoutId);
 
         if (!active) return;
-        if (!res.ok) throw new Error('API Request Failed');
+        
+        let json;
+        try {
+          json = await res.json();
+        } catch(e) {
+          throw new Error('API Request Failed');
+        }
 
-        const json = await res.json();
+        if (!res.ok) {
+          if (json.errors && json.errors[0].includes("request limit")) {
+            throw new Error("API_LIMIT");
+          }
+          throw new Error(json.errors?.[0] || 'API Request Failed');
+        }
+        
         if (json.errors) throw new Error(json.errors[0]);
 
         // Deduplicate
@@ -134,7 +146,11 @@ const NewsFeed = ({ onPoints }: NewsFeedProps) => {
       } catch (e: any) {
         if (!active) return;
         console.error('[NewsFeed] Error fetching news:', e);
-        setError(lang === 'ar' ? 'عذراً، تعذر الاتصال بخدمة الأخبار' : 'Sorry, could not connect to news service');
+        if (e.message === "API_LIMIT") {
+          setError(lang === 'ar' ? 'عذراً، لقد استنفذت الحد اليومي المجاني للأخبار. ستعود للعمل غداً.' : 'Sorry, the daily free limit for news is exhausted. It will work tomorrow.');
+        } else {
+          setError(lang === 'ar' ? 'عذراً، تعذر الاتصال بخدمة الأخبار' : 'Sorry, could not connect to news service');
+        }
         setArticles([]);
       } finally {
         if (active) setLoading(false);
