@@ -1,4 +1,0 @@
-{
-  "name": "jasmin-nada-help",
-  "rewrites": [{ "source": "/(.*)", "destination": "/index.html" }]
-}

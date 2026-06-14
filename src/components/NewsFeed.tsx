@@ -96,17 +96,33 @@ const NewsFeed = ({ onPoints }: NewsFeedProps) => {
         }
 
         const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 8000);
+        const timeoutId = setTimeout(() => controller.abort(), 10000);
 
-        // Fetch directly from GNews API (it supports CORS natively, proxies block Netlify/Vercel)
-        const res = await fetch(api, { signal: controller.signal });
+        // List of proxies to try, falling back if one fails (Netlify/Vercel sometimes get blocked by free proxies)
+        const proxies = [
+          `https://api.allorigins.win/raw?url=${encodeURIComponent(api)}`,
+          `https://corsproxy.io/?${encodeURIComponent(api)}`,
+          `https://thingproxy.freeboard.io/fetch/${api}`
+        ];
+
+        let json = null;
+        for (const proxyUrl of proxies) {
+          try {
+            const res = await fetch(proxyUrl, { signal: controller.signal });
+            if (res.ok) {
+              json = await res.json();
+              break; // Success
+            }
+          } catch (err) {
+            console.warn('Proxy failed:', proxyUrl, err);
+            // Continue to the next proxy
+          }
+        }
+        
         clearTimeout(timeoutId);
 
         if (!active) return;
-        if (!res.ok) throw new Error('API Request Failed');
-        
-        // Parse the actual response
-        const json = await res.json();
+        if (!json) throw new Error('All CORS proxies failed');
         if (json.errors) throw new Error(json.errors[0]);
 
         // Deduplicate
