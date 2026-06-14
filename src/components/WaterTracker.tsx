@@ -140,10 +140,21 @@ const WaterTracker = ({ onDrink }: WaterTrackerProps) => {
     { labelAr: 'زجاجة كبيرة', labelEn: 'Large Bottle', cups: 3, icon: '🍶' },
   ];
 
-  // حساب العمليات الحسابية الخاصة بالسجل الأسبوعي بشكل آمن من الـ state المباشرة
-  const totalMl = waterLog.reduce((s: any, it: any) => s + (it.amount || 250), 0);
-  const last = waterLog[waterLog.length - 1];
-  const lastTime = last ? (last.time ? new Date(last.time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : last.date) : '—';
+  const groupedLog = waterLog.reduce((acc: any, item: any) => {
+    const d = new Date(item.time || item.date);
+    const dateStr = d.toLocaleDateString();
+    if (!acc[dateStr]) {
+      acc[dateStr] = { cups: 0, ml: 0, lastTime: '—' };
+    }
+    acc[dateStr].cups += 1;
+    acc[dateStr].ml += (item.amount || 250);
+    if (item.time) {
+      acc[dateStr].lastTime = d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    }
+    return acc;
+  }, {});
+
+  const groupedEntries = Object.entries(groupedLog).reverse();
 
   return (
     <div className="glass-card rounded-2xl p-5 animate-slide-up">
@@ -226,23 +237,22 @@ const WaterTracker = ({ onDrink }: WaterTrackerProps) => {
         </button>
       )}
 
-      {/* السجل الأسبوعي يعرض الآن بثبات ومزامنة كاملة مع الإضافات */}
-      {waterLog.length > 0 && (
-        <div className="border-t border-border/50 pt-3 space-y-2 animate-slide-up">
+      {groupedEntries.length > 0 && (
+        <div className="border-t border-border/50 pt-3 mt-4 space-y-2 animate-slide-up">
           <p className="text-xs font-medium text-muted-foreground uppercase">{lang === 'ar' ? 'سجل الأسبوع' : 'Weekly Record'}</p>
-          <div className="grid grid-cols-3 gap-2 text-center">
-            <div className="glass-card rounded-lg p-2">
-              <p className="text-[10px] text-muted-foreground">{lang === 'ar' ? 'أكواب الأسبوع' : 'Week Cups'}</p>
-              <p className="text-sm font-bold text-foreground">{waterLog.length}</p>
-            </div>
-            <div className="glass-card rounded-lg p-2">
-              <p className="text-[10px] text-muted-foreground">{lang === 'ar' ? 'الإجمالي' : 'Total'}</p>
-              <p className="text-sm font-bold text-foreground">{totalMl >= 1000 ? (totalMl / 1000).toFixed(1) + ' L' : totalMl + ' ml'}</p>
-            </div>
-            <div className="glass-card rounded-lg p-2">
-              <p className="text-[10px] text-muted-foreground">{lang === 'ar' ? 'آخر شربة' : 'Last Drink'}</p>
-              <p className="text-sm font-bold text-foreground text-ellipsis overflow-hidden whitespace-nowrap">{lastTime}</p>
-            </div>
+          <div className="space-y-2 max-h-48 overflow-y-auto pr-1">
+            {groupedEntries.map(([date, data]: [string, any]) => (
+              <div key={date} className="glass-card rounded-lg p-3 text-sm flex justify-between items-center">
+                <div className="flex flex-col">
+                  <span className="font-bold text-foreground">{date}</span>
+                  <span className="text-[10px] text-muted-foreground">{data.cups} {lang === 'ar' ? 'أكواب' : 'cups'} — {data.ml >= 1000 ? (data.ml / 1000).toFixed(1) + ' L' : data.ml + ' ml'}</span>
+                </div>
+                <div className="text-right flex flex-col">
+                  <span className="text-xs text-muted-foreground">{lang === 'ar' ? 'آخر شربة' : 'Last Drink'}</span>
+                  <span className="font-bold text-foreground text-accent">{data.lastTime}</span>
+                </div>
+              </div>
+            ))}
           </div>
         </div>
       )}

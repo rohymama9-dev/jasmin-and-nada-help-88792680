@@ -244,11 +244,12 @@ const SleepTracker = ({ onPoints = () => {} }: SleepTrackerProps) => {
             </p>
           </div>
           
-          <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-none snap-x">
+          <div className="space-y-2 max-h-48 overflow-y-auto pr-1">
             {Object.entries(weeklyRecords)
               .sort(([dateA], [dateB]) => dateB.localeCompare(dateA)) // ترتيب من الأحدث للأقدم
               .map(([dateKey, rec]) => {
                 const isToday = dateKey === today;
+                const dateLabel = isToday ? (lang === 'ar' ? 'اليوم' : 'Today') : new Date(dateKey).toLocaleDateString();
                 
                 // تحديد إيموجي لكل حالة لتجميل الكارت
                 const qualityIcon = 
@@ -257,19 +258,15 @@ const SleepTracker = ({ onPoints = () => {} }: SleepTrackerProps) => {
                   rec.quality === 'fair' ? '⚠️' : '🥱';
 
                 return (
-                  <div 
-                    key={dateKey} 
-                    className={`glass-card rounded-xl p-3 min-w-[90px] flex-shrink-0 flex flex-col items-center gap-1 snap-start border ${isToday ? 'border-primary/50 bg-primary/5' : 'border-border/30'}`}
-                  >
-                    <span className="text-[10px] text-muted-foreground">
-                      {isToday ? (lang === 'ar' ? 'اليوم' : 'Today') : dateKey.substring(5)}
-                    </span>
-                    <span className="text-lg font-bold text-foreground">
-                      {rec.hours}h
-                    </span>
-                    <span className={`text-[10px] font-bold ${getSleepQualityColor(rec.quality)}`}>
-                      {qualityIcon} {lang === 'ar' ? qualityLabels[rec.quality].ar : qualityLabels[rec.quality].en}
-                    </span>
+                  <div key={dateKey} className={`glass-card rounded-lg p-3 text-sm flex justify-between items-center ${isToday ? 'border border-primary/50 bg-primary/5' : ''}`}>
+                    <div className="flex flex-col">
+                      <span className="font-bold text-foreground">{dateLabel}</span>
+                      <span className="text-[10px] text-muted-foreground">{rec.hours} {lang === 'ar' ? 'ساعات' : 'hours'}</span>
+                    </div>
+                    <div className="text-right flex flex-col">
+                      <span className="text-xs text-muted-foreground">{lang === 'ar' ? 'الجودة' : 'Quality'}</span>
+                      <span className={`font-bold text-[11px] ${getSleepQualityColor(rec.quality)}`}>{qualityIcon} {lang === 'ar' ? qualityLabels[rec.quality].ar : qualityLabels[rec.quality].en}</span>
+                    </div>
                   </div>
                 );
             })}

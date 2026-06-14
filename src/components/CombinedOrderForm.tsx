@@ -15,8 +15,8 @@ const REGULAR_SERVICES = [
 ];
 
 const OFFER_SERVICES = [
-  { id: 'offer_img', arName: 'تعديل صورتين بالذكاء الاصطناعي مع دمجهم مع الصور القديمةوتحسين جودتهم', enName: 'AI Image Editing (2 images)', price: '$3 بدل $5 / $3 instead of $5' },
-  { id: 'offer_pdf', arName: 'تحويل ملفين Word/PDF',            enName: 'Word/PDF Conversion (2 files)', price: '$3 بدل $5 / $3 instead of $5' },
+  { id: 'offer_img', arName: 'تعديل صورتين بالذكاء الاصطناعي مع دمجهم مع الصور القديمةوتحسين جودتهم', enName: 'AI Image Editing (2 images)', price: '$3', arPrice: '$3 بدل $5', enPrice: '$3 instead of $5' },
+  { id: 'offer_pdf', arName: 'تحويل ملفين Word/PDF',            enName: 'Word/PDF Conversion (2 files)', price: '$3', arPrice: '$3 بدل $5', enPrice: '$3 instead of $5' },
   { id: 'offer_bg10', arName: 'إزالة خلفية 10 صور مع تحسين جودتهم مع اضافتهم للقديمه وعدم عرضهم في معرض صوري', enName: 'Remove BG & upscale 10 images (Private)', price: '$10' },
 ];
 
@@ -123,7 +123,7 @@ export default function CombinedOrderForm({ onClose, lang, hideOffers }: { onClo
                     <p className="text-sm font-medium text-foreground leading-snug">
                       {lang === 'ar' ? s.arName : s.enName}
                     </p>
-                    <p className="text-xs font-bold text-rose-500">{s.price}</p>
+                    <p className="text-xs font-bold text-rose-500">{lang === 'ar' ? s.arPrice || s.price : s.enPrice || s.price}</p>
                   </div>
                   <div className="flex items-center gap-2 bg-secondary rounded-xl px-2 py-1 shrink-0">
                     <button type="button" onClick={() => updateQty(s.id, -1)}

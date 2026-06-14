@@ -374,15 +374,6 @@ const ColoringBook = () => {
           <div className="flex-1">
             <h2 className="text-xl font-bold text-foreground">{t('coloringBook')}</h2>
           </div>
-          
-          {/* زر الرفع ظاهر دائماً */}
-          <button
-            onClick={() => fileInputRef.current?.click()}
-            className="p-2 rounded-xl bg-primary/5 text-primary border border-primary/20 active:scale-95 transition-all"
-            aria-label="Upload"
-          >
-            <Upload size={18} />
-          </button>
 
           {/* القلب يظهر فقط للتحكم في خيار الحذف (علامة ×) */}
           <button 
