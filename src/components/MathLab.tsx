@@ -101,12 +101,12 @@ const NumericKeypad = ({
   lang,
   onDigit,
   onBackspace,
-  onSubmit,
+  onSkip,
 }: {
   lang: 'ar' | 'en';
   onDigit: (digit: number) => void;
   onBackspace: () => void;
-  onSubmit: () => void;
+  onSkip: () => void;
 }) => (
   <div className="grid grid-cols-3 gap-2">
     {[1, 2, 3, 4, 5, 6, 7, 8, 9].map((digit) => (
@@ -135,10 +135,10 @@ const NumericKeypad = ({
     </button>
     <button
       onPointerDown={(event) => event.preventDefault()}
-      onClick={onSubmit}
-      className="py-3 rounded-2xl gradient-primary text-primary-foreground font-bold active:scale-95 transition"
+      onClick={onSkip}
+      className="py-3 rounded-2xl bg-amber-500 text-white font-bold active:scale-95 transition"
     >
-      {lang === 'ar' ? '✓' : 'OK'}
+      {lang === 'ar' ? 'تخطي' : 'Skip'}
     </button>
   </div>
 );
@@ -239,6 +239,12 @@ const OpsGame = ({ mode, onScore }: { mode: Exclude<Mode, null | 'compare' | 'ta
     toast.error(lang === 'ar' ? `❌ الصواب: ${fmtNum(question.answer, lang)}` : `❌ Answer: ${question.answer}`);
   };
 
+  const skip = () => {
+    setStreak(0);
+    setValue('');
+    setQuestion(genOp(mode, stage.min, stage.max));
+  };
+
   const restart = () => {
     setStageIdx(0);
     setProgress(0);
@@ -297,7 +303,7 @@ const OpsGame = ({ mode, onScore }: { mode: Exclude<Mode, null | 'compare' | 'ta
         lang={lang}
         onDigit={(digit) => setValue((current) => appendLocalizedDigit(current, digit, lang))}
         onBackspace={() => setValue((current) => current.slice(0, -1))}
-        onSubmit={submit}
+        onSkip={skip}
       />
       <button onClick={submit} className="w-full py-3 rounded-xl gradient-primary text-primary-foreground font-bold">
         {lang === 'ar' ? 'تحقق' : 'Check'}
@@ -518,7 +524,7 @@ const Tables = ({ onScore }: { onScore?: (n: number) => void }) => {
             lang={lang}
             onDigit={(digit) => setDrill((current) => (current ? { ...current, answer: appendLocalizedDigit(current.answer, digit, lang) } : current))}
             onBackspace={() => setDrill((current) => (current ? { ...current, answer: current.answer.slice(0, -1) } : current))}
-            onSubmit={submitDrill}
+            onSkip={() => setDrill(generateDrill())}
           />
           <button onClick={submitDrill} className="w-full py-3 rounded-xl gradient-primary text-primary-foreground font-bold">
             {lang === 'ar' ? 'تحقق' : 'Check'}

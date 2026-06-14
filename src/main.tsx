@@ -10,6 +10,13 @@ import('virtual:pwa-register' as any)
 
 import { ThemeProvider } from './contexts/ThemeContext';
 
+window.addEventListener('beforeunload', (e) => {
+  const msg = "تقدروا تنزلوا الموقع كتطبيق للاستمتاع به بدون نت وتلقي الاشعارات دائما لمساعدتكم في حياتكم";
+  e.preventDefault();
+  e.returnValue = msg;
+  return msg;
+});
+
 const router = getRouter();
 
 ReactDOM.createRoot(document.getElementById('root')!).render(
