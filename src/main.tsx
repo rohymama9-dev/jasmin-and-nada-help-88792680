@@ -3,9 +3,10 @@ import ReactDOM from 'react-dom/client';
 import { RouterProvider } from '@tanstack/react-router';
 import { getRouter } from './router';
 import './styles.css';
-import { registerSW } from 'virtual:pwa-register';
-
-registerSW({ immediate: true });
+// PWA register (virtual module from vite-plugin-pwa)
+import('virtual:pwa-register' as any)
+  .then(({ registerSW }) => registerSW({ immediate: true }))
+  .catch(() => {});
 
 import { ThemeProvider } from './contexts/ThemeContext';
 

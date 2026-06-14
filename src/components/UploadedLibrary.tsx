@@ -34,13 +34,13 @@ const UploadedLibrary = ({ category, reloadKey = 0 }: Props) => {
 
   useEffect(() => {
     let active = true;
-    supabase
+    (supabase as any)
       .from('admin_uploads')
       .select('*')
       .eq('category', category)
       .order('created_at', { ascending: false })
       .limit(50)
-      .then(({ data }) => {
+      .then(({ data }: { data: any[] | null }) => {
         if (active) setItems((data as UploadRow[]) || []);
       });
     return () => { active = false; };
@@ -50,7 +50,7 @@ const UploadedLibrary = ({ category, reloadKey = 0 }: Props) => {
     if (!isAdmin || item.user_id !== uid) return;
     if (!confirm(t('حذف هذا العنصر؟', 'Delete this item?'))) return;
     await supabase.storage.from('admin-uploads').remove([item.storage_path]);
-    await supabase.from('admin_uploads').delete().eq('id', item.id);
+    await (supabase as any).from('admin_uploads').delete().eq('id', item.id);
     setItems(prev => prev.filter(i => i.id !== item.id));
   };
 

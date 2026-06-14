@@ -68,7 +68,7 @@ const AdminUploadInline = ({ category, accept, labelAr, labelEn, onUploaded }: A
 
       const { data: pub } = supabase.storage.from('admin-uploads').getPublicUrl(path);
 
-      const { error: insErr } = await supabase.from('admin_uploads').insert({
+      const { error: insErr } = await (supabase as any).from('admin_uploads').insert({
         user_id: ANON_OWNER,
         category,
         title: title.trim(),

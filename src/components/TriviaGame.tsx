@@ -62,7 +62,7 @@ const TriviaGame = ({ onScore }: TriviaGameProps) => {
       nextPools[question.level].push(index);
     });
 
-    (Object.keys(nextPools) as Array<keyof typeof nextPools>).forEach((level) => {
+    (Object.keys(nextPools) as unknown as Array<keyof typeof nextPools>).forEach((level) => {
       nextPools[level] = shuffle(nextPools[level]);
     });
 
@@ -74,7 +74,7 @@ const TriviaGame = ({ onScore }: TriviaGameProps) => {
     const order = [level, level - 1, level + 1, level - 2, level + 2, level + 3, level - 3]
       .filter(l => l >= 1 && l <= 5);
 
-    const isExhausted = (Object.keys(pools) as Array<keyof typeof pools>).every((poolLevel) => pools[poolLevel].length === 0);
+    const isExhausted = (Object.keys(pools) as unknown as Array<keyof typeof pools>).every((poolLevel) => pools[poolLevel].length === 0);
     if (isExhausted) {
       refillPools();
     }

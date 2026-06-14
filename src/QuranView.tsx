@@ -12,7 +12,7 @@ import { useLang } from '@/contexts/LanguageContext';
 import { usePoints } from '@/hooks/usePoints';
 import { BookMarked, Heart, Bookmark } from 'lucide-react';
 import { toast } from 'sonner';
-import AzkarView from './AzkarView';
+import AzkarView from './pages/AzkarView';
 
 const QURAN_URL = '/quran/index.html';
 
