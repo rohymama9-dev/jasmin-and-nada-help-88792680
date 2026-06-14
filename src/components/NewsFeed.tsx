@@ -89,10 +89,10 @@ const NewsFeed = ({ onPoints }: NewsFeedProps) => {
           const q = cat === "celebrity"
             ? (CELEB_Q[apiLang] || CELEB_Q.en)
             : (apiLang === "ar" ? (SEARCH_Q_AR[cat] || SEARCH_Q_AR.all) : (SEARCH_Q_EN[cat] || SEARCH_Q_EN.all));
-          api = `/api/news/v4/search?q=${encodeURIComponent(q)}&lang=${apiLang}&country=${country}&from=${from}&sortby=publishedAt&max=20&apikey=${GNEWS_KEY}`;
+          api = `https://gnews.io/api/v4/search?q=${encodeURIComponent(q)}&lang=${apiLang}&country=${country}&from=${from}&sortby=publishedAt&max=20&apikey=${GNEWS_KEY}`;
         } else {
           const topic = TOPIC_MAP[cat] || "breaking-news";
-          api = `/api/news/v4/top-headlines?topic=${topic}&lang=${apiLang}&country=${country}&max=20&apikey=${GNEWS_KEY}`;
+          api = `https://gnews.io/api/v4/top-headlines?topic=${topic}&lang=${apiLang}&country=${country}&max=20&apikey=${GNEWS_KEY}`;
         }
 
         const controller = new AbortController();
