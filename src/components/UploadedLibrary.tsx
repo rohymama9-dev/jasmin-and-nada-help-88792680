@@ -40,7 +40,7 @@ const UploadedLibrary = ({ category, reloadKey = 0 }: Props) => {
       .eq('category', category)
       .order('created_at', { ascending: false })
       .limit(50)
-      .then(({ data }) => {
+      .then(({ data }: { data: any[] | null }) => {
         if (active) setItems((data as UploadRow[]) || []);
       });
     return () => { active = false; };

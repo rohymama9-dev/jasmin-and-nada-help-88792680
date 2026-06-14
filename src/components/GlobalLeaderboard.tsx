@@ -63,8 +63,8 @@ const GlobalLeaderboard = ({ points, currentPoints, section = 'global' }: Global
 
   const fetchLeaderboard = async () => {
     setLoading(true);
-    let result = await supabase
-      .from('leaderboards' as any)
+    let result = await (supabase as any)
+      .from('leaderboards')
       .select('name,score')
       .eq('section', section)
       .eq('week_start', weekStartKey)
@@ -73,8 +73,8 @@ const GlobalLeaderboard = ({ points, currentPoints, section = 'global' }: Global
 
     if (result.error) {
       console.warn('Leaderboard section load failed, retrying fallback:', result.error.message || result.error);
-      const fallback = await supabase
-        .from('leaderboards' as any)
+      const fallback = await (supabase as any)
+        .from('leaderboards')
         .select('name,score')
         .order('score', { ascending: false })
         .limit(10);
@@ -141,8 +141,8 @@ const GlobalLeaderboard = ({ points, currentPoints, section = 'global' }: Global
 
     setSubmitting(true);
 
-    const { data: existingRows, error: fetchError } = await supabase
-      .from('leaderboards' as any)
+    const { data: existingRows, error: fetchError } = await (supabase as any)
+      .from('leaderboards')
       .select('id,score')
       .eq('name', name)
       .eq('section', section)
@@ -158,7 +158,7 @@ const GlobalLeaderboard = ({ points, currentPoints, section = 'global' }: Global
 
     const existing = Array.isArray(existingRows) ? existingRows[0] : existingRows;
 
-    if (existing && totalScore <= existing.score) {
+    if (existing && totalScore <= (existing as any).score) {
       toast.error(
         lang === 'ar'
           ? 'النقاط الحالية ليست أعلى من نتيجتك السابقة في اللوحة.'
@@ -172,15 +172,15 @@ const GlobalLeaderboard = ({ points, currentPoints, section = 'global' }: Global
     let mutationError = null;
 
     if (existing) {
-      const { error } = await supabase
-        .from('leaderboards' as any)
+      const { error } = await (supabase as any)
+        .from('leaderboards')
         .update({ score: totalScore })
-        .eq('id', existing.id);
+        .eq('id', (existing as any).id);
 
       mutationError = error;
     } else {
-      const { error } = await supabase
-        .from('leaderboards' as any)
+      const { error } = await (supabase as any)
+        .from('leaderboards')
         .insert([{ name, section, week_start: weekStartKey, score: totalScore }]);
 
       mutationError = error;
