@@ -80,6 +80,7 @@ const NewsFeed = ({ onPoints }: NewsFeedProps) => {
 
         const { lang: apiLang, country } = LANG_MAP[lang] || LANG_MAP.en;
         
+        const GNEWS_KEY = "11da12c8c08db9d912fe59c560f651f5";
         let api: string;
         if (cat === "celebrity" || range === "today" || range === "week") {
           const days = range === "week" ? 7 : 1;
@@ -87,10 +88,10 @@ const NewsFeed = ({ onPoints }: NewsFeedProps) => {
           const q = cat === "celebrity"
             ? (CELEB_Q[apiLang] || CELEB_Q.en)
             : (apiLang === "ar" ? (SEARCH_Q_AR[cat] || SEARCH_Q_AR.all) : (SEARCH_Q_EN[cat] || SEARCH_Q_EN.all));
-          api = `/api/news/v4/search?q=${encodeURIComponent(q)}&lang=${apiLang}&country=${country}&from=${from}&sortby=publishedAt&max=20&apikey=11da12c8c08db9d912fe59c560f651f5`;
+          api = `/api/news/v4/search?q=${encodeURIComponent(q)}&lang=${apiLang}&country=${country}&from=${from}&sortby=publishedAt&max=20&apikey=${GNEWS_KEY}`;
         } else {
           const topic = TOPIC_MAP[cat] || "breaking-news";
-          api = `/api/news/v4/top-headlines?topic=${topic}&lang=${apiLang}&country=${country}&max=20&apikey=11da12c8c08db9d912fe59c560f651f5`;
+          api = `/api/news/v4/top-headlines?topic=${topic}&lang=${apiLang}&country=${country}&max=20&apikey=${GNEWS_KEY}`;
         }
 
         const controller = new AbortController();
