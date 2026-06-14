@@ -59,8 +59,6 @@ const NewsFeed = ({ onPoints }: NewsFeedProps) => {
     const load = async () => {
       setLoading(true); setError(null);
       try {
-        const GNEWS_KEY = "11da12c8c08db9d912fe59c560f651f5";
-        
         const TOPIC_MAP: Record<string, string> = {
           all: "breaking-news", sports: "sports", tech: "technology",
           politics: "world", science: "science", health: "health",
@@ -82,29 +80,36 @@ const NewsFeed = ({ onPoints }: NewsFeedProps) => {
 
         const { lang: apiLang, country } = LANG_MAP[lang] || LANG_MAP.en;
         
-        let api: string;
+        let endpoint: 'search' | 'top-headlines';
+        const params: Record<string, string> = {
+          lang: apiLang,
+          country,
+          max: '20',
+        };
+
         if (cat === "celebrity" || range === "today" || range === "week") {
           const days = range === "week" ? 7 : 1;
           const from = new Date(Date.now() - days * 24 * 60 * 60 * 1000).toISOString();
           const q = cat === "celebrity"
             ? (CELEB_Q[apiLang] || CELEB_Q.en)
             : (apiLang === "ar" ? (SEARCH_Q_AR[cat] || SEARCH_Q_AR.all) : (SEARCH_Q_EN[cat] || SEARCH_Q_EN.all));
-          api = `https://gnews.io/api/v4/search?q=${encodeURIComponent(q)}&lang=${apiLang}&country=${country}&from=${from}&sortby=publishedAt&max=20&apikey=${GNEWS_KEY}`;
+          endpoint = 'search';
+          params.q = q;
+          params.from = from;
+          params.sortby = 'publishedAt';
         } else {
           const topic = TOPIC_MAP[cat] || "breaking-news";
-          api = `https://gnews.io/api/v4/top-headlines?topic=${topic}&lang=${apiLang}&country=${country}&max=20&apikey=${GNEWS_KEY}`;
+          endpoint = 'top-headlines';
+          params.topic = topic;
         }
 
-        const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 10000);
-
-        const res = await fetch(api, { signal: controller.signal });
-        clearTimeout(timeoutId);
+        const { data: json, error: functionError } = await supabase.functions.invoke('news-proxy', {
+          body: { endpoint, params },
+        });
 
         if (!active) return;
-        if (!res.ok) throw new Error('API Request Failed');
-
-        const json = await res.json();
+        if (functionError) throw functionError;
+        if (!json) throw new Error('API Request Failed');
         if (json.errors) throw new Error(json.errors[0]);
 
         // Deduplicate
