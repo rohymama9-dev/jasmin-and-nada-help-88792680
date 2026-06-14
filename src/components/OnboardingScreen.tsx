@@ -47,7 +47,7 @@ const OnboardingScreen = ({ onComplete }: OnboardingScreenProps) => {
   const handleEnter = () => {
     const trimmed = name.trim();
     if (!trimmed) {
-      toast.error(t('من فضلكِ أدخلي اسمكِ', 'Please enter your name'));
+      toast.error(t('من فضلكم أدخلوا أسماءكم', 'Please enter your name'));
       return;
     }
     localStorage.setItem(GUEST_NAME_KEY, trimmed);
@@ -64,7 +64,7 @@ const OnboardingScreen = ({ onComplete }: OnboardingScreenProps) => {
             Nada Helps
           </h1>
           <p className="text-sm text-muted-foreground">
-            {t('فقط أدخلي اسمكِ وابدئي', 'Just enter your name to start')}
+            {t('فقط أدخلوا أسماءكم وابدأوا', 'Just enter your name to start')}
           </p>
         </div>
 
@@ -83,7 +83,7 @@ const OnboardingScreen = ({ onComplete }: OnboardingScreenProps) => {
                 value={name}
                 onChange={e => setName(e.target.value)}
                 onKeyDown={e => e.key === 'Enter' && handleEnter()}
-                placeholder={t('أدخلي اسمكِ', 'Enter your name')}
+                placeholder={t('أدخلوا أسماءكم', 'Enter your name')}
                 maxLength={60}
                 className="min-w-0 w-full max-w-full box-border overflow-hidden px-4 py-3 rounded-xl bg-background border border-border text-base focus:outline-none focus:ring-2 focus:ring-primary/50"
               />
@@ -105,8 +105,8 @@ const OnboardingScreen = ({ onComplete }: OnboardingScreenProps) => {
 
           <p className="text-[11px] text-center text-muted-foreground leading-relaxed">
             {t(
-              'سيُطلب منكِ تسجيل الدخول بجوجل فقط عند الخروج أو التحميل.',
-              'You will only be asked to sign in with Google when you sign out or download.'
+              'تقدروا تنزلوا الموقع كتطبيق للاستمتاع به بدون نت وتلقي الاشعارات دائما لمساعدتكم في حياتكم.',
+              'You can download the site as an app to enjoy it offline and always receive notifications to help you in your life.'
             )}
           </p>
         </div>

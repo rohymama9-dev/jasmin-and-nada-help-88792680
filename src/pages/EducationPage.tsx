@@ -31,7 +31,7 @@ const EducationPage = ({ points, educationPoints, addPoints }: Props) => {
   const { updateChallenge } = useDailyComboChallenge();
   
   // تاম نقل activeTab هنا لأعلى لتجنب أخطاء React Hooks
-  const [activeTab, setActiveTab] = useState<'lessons' | 'math' | 'dictation' | 'grammarQuestions'>('lessons');
+  const [activeTab, setActiveTab] = useState<'math' | 'dictation' | 'grammarQuestions'>('math');
   
   const [activeCat, setActiveCat] = useState<LessonCategory | null>(null);
   const [activeLesson, setActiveLesson] = useState<Lesson | null>(null);
@@ -207,12 +207,6 @@ const EducationPage = ({ points, educationPoints, addPoints }: Props) => {
         <GlobalLeaderboard currentPoints={educationPoints} section="education" />
       <div className="flex justify-center gap-2 mt-4">
           <button
-            onClick={() => setActiveTab('lessons')}
-            className={`px-4 py-2 rounded-xl text-xs font-bold transition-all ${activeTab === 'lessons' ? 'gradient-primary text-white' : 'bg-secondary text-muted-foreground'}`}
-          >
-            {t('الدروس', 'Lessons')}
-          </button>
-          <button
             onClick={() => setActiveTab('math')}
             className={`px-4 py-2 rounded-xl text-xs font-bold transition-all ${activeTab === 'math' ? 'gradient-primary text-white' : 'bg-secondary text-muted-foreground'}`}
           >
@@ -232,36 +226,6 @@ const EducationPage = ({ points, educationPoints, addPoints }: Props) => {
           </button>
         </div>
       </div>
-
-      {activeTab === 'lessons' && (
-        <div className="space-y-4">
-          <div className="text-center">
-            <p className="text-xs text-muted-foreground">
-              {t('+٢٤٠ درساً مجانياً مع نطق وتمارين 🌟', '240+ free lessons with pronunciation & exercises 🌟')}
-            </p>
-            <div className="inline-flex items-center gap-2 mt-2 px-3 py-1 rounded-full bg-primary/10 text-primary text-xs font-semibold">
-              {totalCompleted}/{ALL_LESSONS.length} {t('مكتمل', 'completed')}
-            </div>
-          </div>
-          <div className="grid grid-cols-2 gap-3">
-            {CATEGORIES.map(cat => {
-              const meta = CATEGORY_META[cat];
-              const total = lessonsByCategory(cat).length;
-              const done = lessonsByCategory(cat).filter(l => completed.has(l.id)).length;
-              return (
-                <button key={cat} onClick={() => setActiveCat(cat)}
-                  className="glass-card rounded-2xl p-4 flex flex-col items-center gap-2 hover:bg-primary/5 transition-all active:scale-[0.97]">
-                  <div className={`w-12 h-12 rounded-2xl bg-gradient-to-br ${meta.color} flex items-center justify-center shadow-lg`}>
-                    <span className="text-xl">{meta.emoji}</span>
-                  </div>
-                  <p className="font-bold text-foreground text-sm">{meta[lang]}</p>
-                  <p className="text-[10px] text-muted-foreground">{done}/{total}</p>
-                </button>
-              );
-            })}
-          </div>
-        </div>
-      )}
 
       {activeTab === 'math' && (
         <div className="glass-card rounded-2xl p-4">

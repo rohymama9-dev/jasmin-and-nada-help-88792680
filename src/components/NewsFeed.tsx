@@ -80,36 +80,29 @@ const NewsFeed = ({ onPoints }: NewsFeedProps) => {
 
         const { lang: apiLang, country } = LANG_MAP[lang] || LANG_MAP.en;
         
-        let endpoint: 'search' | 'top-headlines';
-        const params: Record<string, string> = {
-          lang: apiLang,
-          country,
-          max: '20',
-        };
-
+        let api: string;
         if (cat === "celebrity" || range === "today" || range === "week") {
           const days = range === "week" ? 7 : 1;
           const from = new Date(Date.now() - days * 24 * 60 * 60 * 1000).toISOString();
           const q = cat === "celebrity"
             ? (CELEB_Q[apiLang] || CELEB_Q.en)
             : (apiLang === "ar" ? (SEARCH_Q_AR[cat] || SEARCH_Q_AR.all) : (SEARCH_Q_EN[cat] || SEARCH_Q_EN.all));
-          endpoint = 'search';
-          params.q = q;
-          params.from = from;
-          params.sortby = 'publishedAt';
+          api = `/api/news/v4/search?q=${encodeURIComponent(q)}&lang=${apiLang}&country=${country}&from=${from}&sortby=publishedAt&max=20&apikey=11da12c8c08db9d912fe59c560f651f5`;
         } else {
           const topic = TOPIC_MAP[cat] || "breaking-news";
-          endpoint = 'top-headlines';
-          params.topic = topic;
+          api = `/api/news/v4/top-headlines?topic=${topic}&lang=${apiLang}&country=${country}&max=20&apikey=11da12c8c08db9d912fe59c560f651f5`;
         }
 
-        const { data: json, error: functionError } = await supabase.functions.invoke('news-proxy', {
-          body: { endpoint, params },
-        });
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 10000);
+
+        const res = await fetch(api, { signal: controller.signal });
+        clearTimeout(timeoutId);
 
         if (!active) return;
-        if (functionError) throw functionError;
-        if (!json) throw new Error('API Request Failed');
+        if (!res.ok) throw new Error('API Request Failed');
+
+        const json = await res.json();
         if (json.errors) throw new Error(json.errors[0]);
 
         // Deduplicate
