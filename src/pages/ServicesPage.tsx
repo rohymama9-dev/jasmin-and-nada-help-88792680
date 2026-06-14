@@ -130,6 +130,24 @@ const ServicesPage = ({ points, addPoints }: ServicesPageProps) => {
           );
         })}
       </div>
+      <div className="mt-8 mb-4">
+        <div className="glass-card rounded-3xl p-6 bg-gradient-to-br from-pink-100 to-rose-100 border-2 border-pink-200 text-center relative overflow-hidden">
+          <div className="absolute top-0 right-0 p-4 opacity-10">
+            <Sparkles size={64} />
+          </div>
+          <h3 className="text-lg font-bold text-pink-800 mb-2">{lang === 'ar' ? 'هل أعجبتك خدماتنا؟ ✨' : 'Do you like our services? ✨'}</h3>
+          <p className="text-sm text-pink-700 mb-4 font-medium">{lang === 'ar' ? 'قم بتنزيل التطبيق الآن على الشاشة الرئيسية للاستفادة الكاملة وبسرعة فائقة!' : 'Download the app to your home screen now for full access and super fast experience!'}</p>
+          <button 
+            onClick={() => {
+              const event = new Event('trigger-pwa-install');
+              window.dispatchEvent(event);
+            }}
+            className="bg-pink-500 hover:bg-pink-600 text-white px-6 py-3 rounded-xl font-bold transition-all shadow-md active:scale-95 flex items-center justify-center gap-2 mx-auto relative z-10"
+          >
+            {lang === 'ar' ? 'تنزيل التطبيق الآن 📱' : 'Download App Now 📱'}
+          </button>
+        </div>
+      </div>
     </div>
   );
 };
