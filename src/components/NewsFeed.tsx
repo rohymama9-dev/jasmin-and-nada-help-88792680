@@ -80,7 +80,7 @@ const NewsFeed = ({ onPoints }: NewsFeedProps) => {
 
         const { lang: apiLang, country } = LANG_MAP[lang] || LANG_MAP.en;
         
-        const GNEWS_KEY = "11da12c8c08db9d912fe59c560f651f5";
+        const GNEWS_KEY = "b1adc091918b27360dda5316cda05f5b";
         let api: string;
         if (cat === "celebrity" || range === "today" || range === "week") {
           const days = range === "week" ? 7 : 1;
@@ -101,21 +101,9 @@ const NewsFeed = ({ onPoints }: NewsFeedProps) => {
         clearTimeout(timeoutId);
 
         if (!active) return;
-        
-        let json;
-        try {
-          json = await res.json();
-        } catch(e) {
-          throw new Error('API Request Failed');
-        }
+        if (!res.ok) throw new Error('API Request Failed');
 
-        if (!res.ok) {
-          if (json.errors && json.errors[0].includes("request limit")) {
-            throw new Error("API_LIMIT");
-          }
-          throw new Error(json.errors?.[0] || 'API Request Failed');
-        }
-        
+        const json = await res.json();
         if (json.errors) throw new Error(json.errors[0]);
 
         // Deduplicate
@@ -146,45 +134,8 @@ const NewsFeed = ({ onPoints }: NewsFeedProps) => {
       } catch (e: any) {
         if (!active) return;
         console.error('[NewsFeed] Error fetching news:', e);
-        if (e.message === "API_LIMIT") {
-          // Fallback mock data when limit is reached
-          setArticles([
-            {
-              id: 'mock-1',
-              title: lang === 'ar' ? 'أهم التحديثات الصحية والغذائية لهذا اليوم' : 'Top Health and Nutrition Updates Today',
-              description: lang === 'ar' ? 'تعرف على أحدث النصائح للحفاظ على نمط حياة صحي ونشيط...' : 'Learn the latest tips for maintaining a healthy and active lifestyle...',
-              content: '',
-              url: '#',
-              image: 'https://images.unsplash.com/photo-1490645935967-10de6ba17061?q=80&w=600&auto=format&fit=crop',
-              publishedAt: new Date().toISOString(),
-              source: lang === 'ar' ? 'أخبار الصحة' : 'Health News'
-            },
-            {
-              id: 'mock-2',
-              title: lang === 'ar' ? 'أبرز الابتكارات التقنية التي تغير عالمنا' : 'Top Tech Innovations Changing Our World',
-              description: lang === 'ar' ? 'نظرة على التكنولوجيا الحديثة وكيف تسهم في تحسين الحياة اليومية...' : 'A look at modern technology and how it improves daily life...',
-              content: '',
-              url: '#',
-              image: 'https://images.unsplash.com/photo-1518770660439-4636190af475?q=80&w=600&auto=format&fit=crop',
-              publishedAt: new Date().toISOString(),
-              source: lang === 'ar' ? 'تقنية اليوم' : 'Tech Today'
-            },
-            {
-              id: 'mock-3',
-              title: lang === 'ar' ? 'أحداث رياضية مشوقة هذا الأسبوع' : 'Exciting Sports Events This Week',
-              description: lang === 'ar' ? 'ملخص لأهم المباريات والبطولات الجارية حالياً...' : 'Summary of the most important ongoing matches and tournaments...',
-              content: '',
-              url: '#',
-              image: 'https://images.unsplash.com/photo-1461896836934-ffe607ba8211?q=80&w=600&auto=format&fit=crop',
-              publishedAt: new Date().toISOString(),
-              source: lang === 'ar' ? 'الرياضة الآن' : 'Sports Now'
-            }
-          ]);
-          setError(lang === 'ar' ? 'عذراً، لقد استنفذت الحد اليومي المجاني للأخبار. يتم عرض أخبار بديلة.' : 'Daily free limit reached. Showing fallback news.');
-        } else {
-          setError(lang === 'ar' ? 'عذراً، تعذر الاتصال بخدمة الأخبار' : 'Sorry, could not connect to news service');
-          setArticles([]);
-        }
+        setError(lang === 'ar' ? 'عذراً، تعذر الاتصال بخدمة الأخبار' : 'Sorry, could not connect to news service');
+        setArticles([]);
       } finally {
         if (active) setLoading(false);
       }
