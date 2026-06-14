@@ -89,40 +89,22 @@ const NewsFeed = ({ onPoints }: NewsFeedProps) => {
           const q = cat === "celebrity"
             ? (CELEB_Q[apiLang] || CELEB_Q.en)
             : (apiLang === "ar" ? (SEARCH_Q_AR[cat] || SEARCH_Q_AR.all) : (SEARCH_Q_EN[cat] || SEARCH_Q_EN.all));
-          api = `https://gnews.io/api/v4/search?q=${encodeURIComponent(q)}&lang=${apiLang}&country=${country}&from=${from}&sortby=publishedAt&max=20&apikey=${GNEWS_KEY}`;
+          api = `/api/news/v4/search?q=${encodeURIComponent(q)}&lang=${apiLang}&country=${country}&from=${from}&sortby=publishedAt&max=20&apikey=${GNEWS_KEY}`;
         } else {
           const topic = TOPIC_MAP[cat] || "breaking-news";
-          api = `https://gnews.io/api/v4/top-headlines?topic=${topic}&lang=${apiLang}&country=${country}&max=20&apikey=${GNEWS_KEY}`;
+          api = `/api/news/v4/top-headlines?topic=${topic}&lang=${apiLang}&country=${country}&max=20&apikey=${GNEWS_KEY}`;
         }
 
         const controller = new AbortController();
         const timeoutId = setTimeout(() => controller.abort(), 10000);
 
-        // List of proxies to try, falling back if one fails (Netlify/Vercel sometimes get blocked by free proxies)
-        const proxies = [
-          `https://api.allorigins.win/raw?url=${encodeURIComponent(api)}`,
-          `https://corsproxy.io/?${encodeURIComponent(api)}`,
-          `https://thingproxy.freeboard.io/fetch/${api}`
-        ];
-
-        let json = null;
-        for (const proxyUrl of proxies) {
-          try {
-            const res = await fetch(proxyUrl, { signal: controller.signal });
-            if (res.ok) {
-              json = await res.json();
-              break; // Success
-            }
-          } catch (err) {
-            console.warn('Proxy failed:', proxyUrl, err);
-            // Continue to the next proxy
-          }
-        }
-        
+        const res = await fetch(api, { signal: controller.signal });
         clearTimeout(timeoutId);
 
         if (!active) return;
-        if (!json) throw new Error('All CORS proxies failed');
+        if (!res.ok) throw new Error('API Request Failed');
+
+        const json = await res.json();
         if (json.errors) throw new Error(json.errors[0]);
 
         // Deduplicate

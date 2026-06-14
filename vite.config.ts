@@ -40,5 +40,12 @@ export default defineConfig({
   server: {
     host: "::",
     port: 8080,
+    proxy: {
+      '/api/news': {
+        target: 'https://gnews.io/api',
+        changeOrigin: true,
+        rewrite: (path) => path.replace(/^\/api\/news/, '')
+      }
+    }
   },
 });
