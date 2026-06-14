@@ -58,7 +58,7 @@ const PrivateUploadInline = ({ category, accept, labelAr, labelEn }: PrivateUplo
       setItems([]);
       return;
     }
-    const { data, error } = await supabase
+    const { data, error } = await (supabase as any)
       .from('private_uploads')
       .select('id,title,storage_path,mime_type')
       .eq('category', category)
@@ -70,7 +70,7 @@ const PrivateUploadInline = ({ category, accept, labelAr, labelEn }: PrivateUplo
     }
     // Sign URLs in parallel
     const signed = await Promise.all(
-      data.map(async (row) => {
+      (data as any[]).map(async (row: any) => {
         const { data: s } = await supabase.storage
           .from('private-uploads')
           .createSignedUrl(row.storage_path, 60 * 60);
@@ -113,7 +113,7 @@ const PrivateUploadInline = ({ category, accept, labelAr, labelEn }: PrivateUplo
         .upload(path, file, { contentType: file.type, upsert: false });
       if (upErr) throw upErr;
 
-      const { error: insErr } = await supabase.from('private_uploads').insert({
+      const { error: insErr } = await (supabase as any).from('private_uploads').insert({
         user_id: uid,
         category,
         title: title.trim(),
@@ -137,7 +137,7 @@ const PrivateUploadInline = ({ category, accept, labelAr, labelEn }: PrivateUplo
   const handleDelete = async (item: Item) => {
     if (!confirm(t('حذف هذا الملف؟', 'Delete this file?'))) return;
     await supabase.storage.from('private-uploads').remove([item.storage_path]);
-    await supabase.from('private_uploads').delete().eq('id', item.id);
+    await (supabase as any).from('private_uploads').delete().eq('id', item.id);
     refresh();
   };
 

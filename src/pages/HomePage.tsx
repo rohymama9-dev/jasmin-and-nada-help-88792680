@@ -30,8 +30,8 @@ const HomePage = ({ points, addPoints }: HomePageProps) => {
     (async () => {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user || !active) return;
-      const { data } = await supabase.from('profiles').select('name').eq('id', user.id).maybeSingle();
-      if (active && data?.name) setName(data.name);
+      const { data } = await (supabase as any).from('profiles').select('name').eq('id', user.id).maybeSingle();
+      if (active && (data as any)?.name) setName((data as any).name);
     })();
     return () => { active = false; };
   }, []);

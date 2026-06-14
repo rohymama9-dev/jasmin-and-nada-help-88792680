@@ -224,8 +224,8 @@ const buildItem = (item: JsonAzkar, builder: (item: JsonAzkar) => AzkarItem | Az
   return Array.isArray(result) ? result : [result];
 };
 
-export const morningAzkar: AzkarItem[] = morningEveningSection.flatMap(item => buildItem(item, buildMorningItem));
-export const eveningAzkar: AzkarItem[] = morningEveningSection.flatMap(item => buildItem(item, buildEveningItem));
+export const morningAzkar: AzkarItem[] = morningEveningSection.flatMap((item: JsonAzkar) => buildItem(item, buildMorningItem));
+export const eveningAzkar: AzkarItem[] = morningEveningSection.flatMap((item: JsonAzkar) => buildItem(item, buildEveningItem));
 export const travelAzkar: AzkarItem[] = travelSection.map((item: any) => ({
   id: `t-${item.ID}`,
   textAr: item.ARABIC_TEXT,

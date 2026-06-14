@@ -54,7 +54,7 @@ const AdminUploadForm = () => {
   };
 
   const refresh = async () => {
-    const { data } = await supabase
+    const { data } = await (supabase as any)
       .from('admin_uploads')
       .select('*')
       .order('created_at', { ascending: false })
@@ -83,7 +83,7 @@ const AdminUploadForm = () => {
 
       const { data: pub } = supabase.storage.from('admin-uploads').getPublicUrl(path);
 
-      const { error: insErr } = await supabase.from('admin_uploads').insert({
+      const { error: insErr } = await (supabase as any).from('admin_uploads').insert({
         user_id: uid,
         category,
         title: title.trim(),
@@ -107,7 +107,7 @@ const AdminUploadForm = () => {
     if (item.user_id !== uid) return;
     if (!confirm(t('حذف هذا العنصر؟', 'Delete this item?'))) return;
     await supabase.storage.from('admin-uploads').remove([item.storage_path]);
-    await supabase.from('admin_uploads').delete().eq('id', item.id);
+    await (supabase as any).from('admin_uploads').delete().eq('id', item.id);
     refresh();
   };
 

@@ -117,20 +117,20 @@ const ColoringBook = () => {
       setUploaded(local);
     } catch { /* ignore */ }
     let active = true;
-    supabase
+    (supabase as any)
       .from('admin_uploads')
       .select('id,title,public_url,mime_type')
       .eq('category', 'coloring')
       .order('created_at', { ascending: false })
       .limit(40)
-      .then(({ data }) => {
+      .then(({ data }: { data: any[] | null }) => {
         if (!active || !data) return;
         let hidden: string[] = [];
         try { hidden = JSON.parse(localStorage.getItem(HIDDEN_CLOUD_KEY) || '[]'); } catch { /* ignore */ }
         const cloud: UploadedPage[] = data
-          .filter(d => (d.mime_type || '').startsWith('image/'))
-          .filter(d => !hidden.includes(d.id))
-          .map(d => ({ id: d.id, title: d.title, url: d.public_url, source: 'cloud' }));
+          .filter((d: any) => (d.mime_type || '').startsWith('image/'))
+          .filter((d: any) => !hidden.includes(d.id))
+          .map((d: any) => ({ id: d.id, title: d.title, url: d.public_url, source: 'cloud' as const }));
         setUploaded(prev => {
           const localOnly = prev.filter(p => p.source === 'device');
           return [...cloud, ...localOnly];
