@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { BookOpenText, Palette, BookOpen, Wand2, UtensilsCrossed, Lock, Check, Sparkles, Sticker, GraduationCap, ShoppingCart } from 'lucide-react';
+import { BookOpenText, Palette, BookOpen, Wand2, UtensilsCrossed, Lock, Check, Sparkles, Sticker, GraduationCap, FileArchive, FileCode2 } from 'lucide-react';
 import { useLang } from '@/contexts/LanguageContext';
 import { toast } from '@/hooks/use-toast';
 import KidsStories from '@/components/KidsStories';
@@ -12,6 +12,8 @@ import StickerStore from '@/components/StickerStore';
 import QuizEngine from '@/components/QuizEngine';
 import CombinedOrderForm from '@/components/CombinedOrderForm';
 import PersonalityQuizzes from '@/components/PersonalityQuizzes';
+import FileCompressor from '@/components/FileCompressor';
+import FormatConverter from '@/components/FormatConverter';
 
 interface ServicesPageProps {
   points: number;
@@ -40,6 +42,8 @@ const services: ServiceCard[] = [
   { id: 'quiz', icon: GraduationCap, nameAr: 'محرك الاختبارات', nameEn: 'Quiz Engine', cost: 20, color: 'from-fuchsia-500 to-purple-700' },
   { id: 'personalityquizzes', icon: Sparkles, nameAr: 'اختبارات الشخصية', nameEn: 'Personality Quizzes', cost: 20, color: 'from-purple-500 to-pink-600' },
   { id: 'contact', icon: Sparkles, nameAr: 'مراسلة المسؤولة (مجاني)', nameEn: 'Contact Admin (Free)', cost: 0, color: 'from-emerald-500 to-teal-600' },
+  { id: 'compressor', icon: FileArchive, nameAr: '🗜️ ضغط الملفات والصور', nameEn: '🗜️ File & Image Compressor', cost: 80, color: 'from-blue-500 to-cyan-600' },
+  { id: 'converter', icon: FileCode2, nameAr: '🔄 محول الصيغ الشامل', nameEn: '🔄 Universal Format Converter', cost: 80, color: 'from-purple-500 to-violet-600' },
 ];
 
 const ServicesPage = ({ points, addPoints }: ServicesPageProps) => {
@@ -90,6 +94,8 @@ const ServicesPage = ({ points, addPoints }: ServicesPageProps) => {
         case 'quiz': return <QuizEngine onScore={addPoints} />;
         case 'personalityquizzes': return <PersonalityQuizzes />;
         case 'contact': return <CombinedOrderForm onClose={() => setActiveService(null)} lang={lang} hideOffers={true} />;
+        case 'compressor': return <FileCompressor />;
+        case 'converter': return <FormatConverter />;
         default: return null;
       }
     };
@@ -131,21 +137,16 @@ const ServicesPage = ({ points, addPoints }: ServicesPageProps) => {
         })}
       </div>
       <div className="mt-8 mb-4">
-        <div className="glass-card rounded-3xl p-6 bg-gradient-to-br from-pink-100 to-rose-100 border-2 border-pink-200 text-center relative overflow-hidden">
-          <div className="absolute top-0 right-0 p-4 opacity-10">
-            <Sparkles size={64} />
-          </div>
-          <h3 className="text-lg font-bold text-pink-800 mb-2">{lang === 'ar' ? 'هل أعجبتك خدماتنا؟ ✨' : 'Do you like our services? ✨'}</h3>
-          <p className="text-sm text-pink-700 mb-4 font-medium">{lang === 'ar' ? 'قم بتنزيل التطبيق الآن على الشاشة الرئيسية للاستفادة الكاملة وبسرعة فائقة!' : 'Download the app to your home screen now for full access and super fast experience!'}</p>
-          <button 
-            onClick={() => {
-              const event = new Event('trigger-pwa-install');
-              window.dispatchEvent(event);
-            }}
-            className="bg-pink-500 hover:bg-pink-600 text-white px-6 py-3 rounded-xl font-bold transition-all shadow-md active:scale-95 flex items-center justify-center gap-2 mx-auto relative z-10"
-          >
-            {lang === 'ar' ? 'تنزيل التطبيق الآن 📱' : 'Download App Now 📱'}
-          </button>
+        <div className="glass-card rounded-3xl p-5 bg-gradient-to-br from-pink-50 to-rose-50 dark:from-pink-950/30 dark:to-rose-950/30 border border-pink-200 dark:border-pink-900/40 text-center">
+          <div className="text-3xl mb-2">🌸</div>
+          <p className="font-extrabold text-pink-800 dark:text-pink-300 text-sm">
+            {lang === 'ar' ? 'لتحميل التطبيق على شاشتك 📲' : 'Install the app on your screen 📲'}
+          </p>
+          <p className="text-pink-700 dark:text-pink-400 text-xs mt-1 font-medium">
+            {lang === 'ar'
+              ? 'اضغط على زر المشاركة ⎋ ثم اختر «إضافة إلى الشاشة الرئيسية» 🏠'
+              : 'Tap Share ⎋ then choose "Add to Home Screen" 🏠'}
+          </p>
         </div>
       </div>
     </div>

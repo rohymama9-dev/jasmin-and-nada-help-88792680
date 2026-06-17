@@ -14,7 +14,7 @@ const getMaxUsesKey = () => {
   return `app-filecompressor-maxuses-${d.getFullYear()}-${d.getMonth()}-${d.getDate()}`;
 };
 
-const DEFAULT_MAX_USES = 5;
+const DEFAULT_MAX_USES = 3;
 
 const FileCompressor = () => {
   const { lang } = useLang();
@@ -32,8 +32,8 @@ const FileCompressor = () => {
   }, []);
 
   const handleUnlock = () => {
-    if (points >= 50) {
-      subtractPoints(50);
+    if (points >= 80) {
+      subtractPoints(80);
       localStorage.setItem(UNLOCK_KEY, 'true');
       setUnlocked(true);
       toast.success(lang === 'ar' ? 'تم فتح أداة الضغط!' : 'Compressor unlocked!');
@@ -98,13 +98,13 @@ const FileCompressor = () => {
           <h3 className="font-bold text-lg text-foreground mb-1">{lang === 'ar' ? 'أداة ضغط الملفات والصور والفيديوهات' : 'File, Image & Video Compressor'}</h3>
           <p className="text-sm text-muted-foreground mb-2">{lang === 'ar' ? 'ضغط عالي الجودة بدون إنترنت.' : 'High quality offline compression.'}</p>
           <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-rose-100 text-rose-600 dark:bg-rose-900/30 dark:text-rose-400 text-xs font-bold mb-4">
-            <span className="line-through opacity-70">100 🪙</span>
-            <span>🔥 {lang === 'ar' ? 'عرض: 50 نقطة فقط!' : 'Offer: 50 points only!'}</span>
+            <span className="line-through opacity-70">150 🪙</span>
+            <span>🔥 {lang === 'ar' ? 'عرض: 80 نقطة فقط!' : 'Offer: 80 points only!'}</span>
           </div>
         </div>
         <button onClick={handleUnlock} className="w-full py-3 rounded-xl gradient-primary text-primary-foreground font-bold shadow-md">
           <Unlock size={18} className="inline mr-2" />
-          {lang === 'ar' ? 'فتح الأداة (50 🪙)' : 'Unlock Tool (50 🪙)'}
+          {lang === 'ar' ? 'فتح الأداة (80 🪙)' : 'Unlock Tool (80 🪙)'}
         </button>
       </div>
     );
