@@ -881,12 +881,12 @@ const BookSummaries = () => {
                   if (isSpeaking()) { stopSpeaking(); return; }
                   speak(pages.map(p => p.title + '. ' + p.content).join(' '));
                 }}
-                className="flex items-center gap-2 text-xs font-bold text-primary px-4 py-2 rounded-full bg-white shadow-sm border border-primary/10 hover:bg-primary/5 transition-all active:scale-95"
+                className="flex items-center gap-2 text-xs font-bold text-primary dark:text-primary-foreground px-4 py-2 rounded-full bg-white dark:bg-slate-800 shadow-sm border border-primary/10 hover:bg-primary/5 dark:hover:bg-slate-700 transition-all active:scale-95"
               >
                 <Volume2 size={16} />
                 {lang === 'ar' ? 'استماع للكتاب' : 'Listen to Book'}
               </button>
-              <button onClick={() => setSelectedBook(null)} className="p-2 rounded-full bg-white shadow-sm border border-border"><X size={16} /></button>
+              <button onClick={() => setSelectedBook(null)} className="p-2 rounded-full bg-white dark:bg-slate-800 text-foreground dark:text-white shadow-sm border border-border"><X size={16} /></button>
             </div>
           </div>
 

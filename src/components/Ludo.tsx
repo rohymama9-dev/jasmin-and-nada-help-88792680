@@ -444,7 +444,7 @@ const Ludo = ({ onScore }: Props) => {
 
       {/* Controls */}
       <div className="flex items-center justify-center gap-3">
-        <div className="w-14 h-14 rounded-2xl bg-white border-2 border-foreground flex items-center justify-center text-3xl font-extrabold shadow">
+        <div className="w-14 h-14 rounded-2xl bg-white dark:bg-slate-700 border-2 border-foreground flex items-center justify-center text-3xl font-extrabold text-foreground dark:text-white shadow">
           {dice ?? '?'}
         </div>
         {winner === null ? (

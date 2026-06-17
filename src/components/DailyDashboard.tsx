@@ -69,9 +69,19 @@ const DailyDashboard = () => {
   const [selectedMonth, setSelectedMonth] = useState(new Date().getMonth());
   const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
   const [allData] = useState<Record<string, DayRecord>>(loadDashboard);
-  const [visits] = useState<Record<string, boolean>>(loadVisits);
-  const [visitTimes] = useState<Record<string, string>>(loadVisitTimes);
+  const [visits, setVisits] = useState<Record<string, boolean>>(loadVisits);
+  const [visitTimes, setVisitTimes] = useState<Record<string, string>>(loadVisitTimes);
   const [selectedDay, setSelectedDay] = useState<string | null>(null);
+
+  useEffect(() => {
+    const handler = () => {
+      setVisits(loadVisits());
+      setVisitTimes(loadVisitTimes());
+    };
+    window.addEventListener('attendance-updated', handler);
+    return () => window.removeEventListener('attendance-updated', handler);
+  }, []);
+
   const [mood, setMood] = useState<Mood | null>(() => {
     try {
       const d = JSON.parse(localStorage.getItem(MOOD_KEY) || '{}');

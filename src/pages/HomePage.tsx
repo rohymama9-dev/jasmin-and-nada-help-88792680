@@ -42,10 +42,17 @@ const HomePage = ({ points, addPoints }: HomePageProps) => {
         <div className="relative px-5 pt-8 pb-6">
           <div className="flex items-center justify-between mb-4">
             <div>
-              <h1 className="text-2xl font-bold text-foreground">
-                {name ? `${lang === 'ar' ? 'مرحباً' : 'Welcome'} ${name}` : t('welcome')} 🌸
-              </h1>
-              <p className="text-sm text-muted-foreground">{t('dailyProgress')}</p>
+              <div className="flex items-center gap-2">
+                <h1 className="text-2xl font-bold text-foreground">
+                  {name ? `${lang === 'ar' ? 'مرحباً' : 'Welcome'} ${name}` : t('welcome')} 🌸
+                </h1>
+              </div>
+              <div className="flex items-center gap-1.5 mt-1">
+                <p className="text-sm text-muted-foreground">{t('dailyProgress')}</p>
+                <span className="px-2 py-0.5 rounded-full bg-success/20 text-success text-[10px] font-bold">
+                  {lang === 'ar' ? '✅ تم تسجيل الحضور' : '✅ Checked In'}
+                </span>
+              </div>
             </div>
             <div className="flex items-center gap-2">
               <button onClick={toggleTheme}

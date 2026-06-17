@@ -194,7 +194,7 @@ const Game2048Viewer = ({ onBack, onScore }: { onBack?: () => void; onScore?: (r
   };
 
   return (
-    <div className="fixed inset-x-0 top-0 bottom-16 max-w-3xl mx-auto flex flex-col bg-background overflow-hidden z-50">
+    <div className="fixed inset-x-0 top-0 bottom-16 max-w-3xl mx-auto flex flex-col bg-background overflow-hidden z-50 overscroll-none touch-none" style={{ touchAction: 'none' }}>
       {/* Header with Back button */}
       <div className="flex items-center justify-between px-4 py-3 border-b border-border/50 bg-background/50 backdrop-blur-sm flex-shrink-0">
         <button

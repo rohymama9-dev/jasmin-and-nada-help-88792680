@@ -25,6 +25,11 @@ const markTodayVisited = () => {
     const tmap: Record<string, string> = traw ? JSON.parse(traw) : {};
     tmap[today] = new Date().toISOString();
     localStorage.setItem(VISIT_TIMES_KEY, JSON.stringify(tmap));
+    
+    // Notify components that attendance was updated
+    if (typeof window !== 'undefined') {
+      window.dispatchEvent(new Event('attendance-updated'));
+    }
   } catch {
     /* ignore */
   }
