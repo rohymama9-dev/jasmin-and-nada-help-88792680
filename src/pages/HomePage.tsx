@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { LogOut, Moon, Sun } from 'lucide-react';
+import { LogOut, Moon, Sun, FileArchive, FileCode2 } from 'lucide-react';
 import { useLang } from '@/contexts/LanguageContext';
 import { useTheme } from '@/contexts/ThemeContext';
 import { supabase } from '@/integrations/supabase/client';
@@ -11,8 +11,10 @@ import AdPlaceholder from '@/components/AdPlaceholder';
 import ServicesBanner from '@/components/ServicesBanner';
 import StudyHabitTools from '@/components/StudyHabitTools';
 import DailyComboChallenge from '@/components/DailyComboChallenge';
-import FileConverter from '@/components/FileConverter';
-// تأكدي أن هذه الصورة موجودة في هذا المسار بالضبط
+import FileCompressor from '@/components/FileCompressor';
+import FormatConverter from '@/components/FormatConverter';
+import ImageResizer from '@/components/ImageResizer';
+import { InstallBanner } from '@/components/InstallBanner';
 import floralBg from '@/assets/floral-bg.jpg';
 
 interface HomePageProps {
@@ -38,6 +40,7 @@ const HomePage = ({ points, addPoints }: HomePageProps) => {
 
   return (
     <div className="pb-4 space-y-5">
+      {/* ── Header ── */}
       <div className="relative -mx-5 -mt-5 rounded-b-3xl overflow-hidden mb-2">
         <img src={floralBg} alt="" className="absolute inset-0 w-full h-full object-cover opacity-30" />
         <div className="relative px-5 pt-8 pb-6">
@@ -56,8 +59,7 @@ const HomePage = ({ points, addPoints }: HomePageProps) => {
               </div>
             </div>
             <div className="flex items-center gap-2">
-              <button onClick={toggleTheme}
-                aria-label="Toggle Theme"
+              <button onClick={toggleTheme} aria-label="Toggle Theme"
                 className="p-1.5 rounded-full bg-secondary text-secondary-foreground hover:bg-secondary/80 transition-colors">
                 {theme === 'dark' ? <Sun size={14} /> : <Moon size={14} />}
               </button>
@@ -86,23 +88,83 @@ const HomePage = ({ points, addPoints }: HomePageProps) => {
         </div>
       </div>
 
+      {/* ── Daily Dashboard ── */}
       <DailyDashboard />
-      <ServicesBanner />
-      <FileConverter />
 
+      {/* ── Services Banner ── */}
+      <ServicesBanner />
+
+      {/* ── Promo Banner: File Compressor ── */}
+      <div
+        dir={lang === 'ar' ? 'rtl' : 'ltr'}
+        className="rounded-2xl p-4 flex items-center gap-4 shadow-md"
+        style={{ background: 'linear-gradient(135deg, #1e3a5f 0%, #1e5f74 100%)' }}
+      >
+        <div className="w-12 h-12 bg-white/15 rounded-xl flex items-center justify-center shrink-0">
+          <FileArchive size={26} className="text-white" />
+        </div>
+        <div className="flex-1 min-w-0">
+          <p className="font-extrabold text-white text-sm leading-tight">
+            {lang === 'ar' ? '🗜️ اضغط ملفاتك، صورك وفيديوهاتك' : '🗜️ Compress Files, Images & Videos'}
+          </p>
+          <p className="text-white/75 text-[11px] mt-0.5">
+            {lang === 'ar'
+              ? 'أداة مجانية أوفلاين · 5 محاولات يومياً · 50 نقطة فقط'
+              : 'Free offline tool · 5 daily uses · 50 pts only'}
+          </p>
+        </div>
+        <span className="shrink-0 bg-white text-blue-800 text-[10px] font-extrabold px-2.5 py-1 rounded-full shadow">
+          {lang === 'ar' ? '↓ أسفل' : '↓ Below'}
+        </span>
+      </div>
+
+      {/* ── File Compressor Tool ── */}
+      <FileCompressor />
+
+      {/* ── Promo Banner: Format Converter ── */}
+      <div
+        dir={lang === 'ar' ? 'rtl' : 'ltr'}
+        className="rounded-2xl p-4 flex items-center gap-4 shadow-md"
+        style={{ background: 'linear-gradient(135deg, #4a0072 0%, #9c27b0 100%)' }}
+      >
+        <div className="w-12 h-12 bg-white/15 rounded-xl flex items-center justify-center shrink-0">
+          <FileCode2 size={26} className="text-white" />
+        </div>
+        <div className="flex-1 min-w-0">
+          <p className="font-extrabold text-white text-sm leading-tight">
+            {lang === 'ar' ? '🔄 حوّل صيغ الصور، الفيديوهات والملفات' : '🔄 Convert Image, Video & File Formats'}
+          </p>
+          <p className="text-white/75 text-[11px] mt-0.5">
+            {lang === 'ar'
+              ? 'محول شامل أوفلاين · 5 محاولات يومياً · 80 نقطة فقط'
+              : 'Full offline converter · 5 daily uses · 80 pts only'}
+          </p>
+        </div>
+        <span className="shrink-0 bg-white text-purple-800 text-[10px] font-extrabold px-2.5 py-1 rounded-full shadow">
+          {lang === 'ar' ? '↓ أسفل' : '↓ Below'}
+        </span>
+      </div>
+
+      {/* ── Format Converter Tool ── */}
+      <FormatConverter />
+
+      {/* ── Image Resizer Tool ── */}
+      <ImageResizer />
+
+      {/* ── Divider + Challenges Section ── */}
       <div className="space-y-6 pt-4 border-t border-border/50">
         <DailyComboChallenge />
         <AdPlaceholder size="banner" />
-        <div className="glass-card rounded-2xl p-5 space-y-3 bg-gradient-to-br from-emerald-50 to-teal-50 border-emerald-200">
-          <h3 className="font-bold text-base text-emerald-900 text-center">
+        <div className="glass-card rounded-2xl p-5 space-y-3 bg-gradient-to-br from-emerald-50 to-teal-50 border-emerald-200 dark:from-emerald-950/30 dark:to-teal-950/30 dark:border-emerald-900/40">
+          <h3 className="font-bold text-base text-emerald-900 dark:text-emerald-200 text-center">
             {lang === 'ar' ? 'التحدي الأسبوعي' : 'Weekly Challenge'}
           </h3>
-          <p className="text-sm text-emerald-800 text-center font-semibold leading-relaxed">
-            {lang === 'ar' 
-              ? '5000 تسبيحة بالمسبحة الذكية = 200 نقطة' 
+          <p className="text-sm text-emerald-800 dark:text-emerald-300 text-center font-semibold leading-relaxed">
+            {lang === 'ar'
+              ? '5000 تسبيحة بالمسبحة الذكية = 200 نقطة'
               : '5000 recitations with Smart Rosary = 200 points'}
           </p>
-          <p className="text-xs text-emerald-700 text-center">
+          <p className="text-xs text-emerald-700 dark:text-emerald-400 text-center">
             {lang === 'ar'
               ? 'تُمنح النقاط تلقائياً عند الوصول للهدف الأسبوعي'
               : 'Points awarded automatically when weekly goal is reached'}
@@ -111,8 +173,11 @@ const HomePage = ({ points, addPoints }: HomePageProps) => {
         <StudyHabitTools />
         <HabitTracker onComplete={() => { window.dispatchEvent(new CustomEvent('combo-habit-checked')); }} />
       </div>
-      
+
       <AdPlaceholder size="rectangle" />
+
+      {/* ── iOS Install Hint (bottom, Apple devices only) ── */}
+      <InstallBanner />
     </div>
   );
 };

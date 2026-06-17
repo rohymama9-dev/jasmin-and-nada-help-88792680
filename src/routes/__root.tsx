@@ -5,7 +5,6 @@ import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { initDailyVisitTracker } from "@/lib/dailyVisit";
-import { InstallBanner } from "@/components/InstallBanner";
 
 function NotFoundComponent() {
   return (
@@ -42,7 +41,6 @@ function RootComponent() {
       <TooltipProvider>
         <Toaster />
         <Sonner />
-        <InstallBanner />
         <Outlet />
       </TooltipProvider>
     </QueryClientProvider>

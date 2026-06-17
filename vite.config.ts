@@ -16,8 +16,8 @@ export default defineConfig({
       registerType: 'autoUpdate',
       includeAssets: ['favicon.ico', 'apple-touch-icon.png', '**/*.png', '**/*.jpg', '**/*.jpeg', '**/*.gif', '**/*.webp', '**/*.svg'],
       manifest: {
-        name: "jn help",
-        short_name: "jn help",
+        name: "jasmin and nada help",
+        short_name: "jasmin and nada help",
         description: "تطبيق تفاعلي للصحة والتعليم والترفيه",
         theme_color: "#f5c6d0",
         background_color: "#ffffff",
