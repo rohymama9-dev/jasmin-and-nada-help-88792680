@@ -1,7 +1,9 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useLang } from '@/contexts/LanguageContext';
 import { Download, X, Check, PlayCircle } from 'lucide-react';
 import { toast } from 'sonner';
+import { FFmpeg } from '@ffmpeg/ffmpeg';
+import { fetchFile, toBlobURL } from '@ffmpeg/util';
 
 const getUsesKey = () => {
   const d = new Date();
@@ -21,6 +23,10 @@ const FileCompressor = () => {
   const [file, setFile] = useState<File | null>(null);
   const [preview, setPreview] = useState<string | null>(null);
   const [quality, setQuality] = useState(70);
+  const [videoQuality, setVideoQuality] = useState<'small' | 'balanced' | 'high'>('balanced');
+  const ffmpegRef = useRef(new FFmpeg());
+  const [ffmpegLoaded, setFfmpegLoaded] = useState(false);
+  const [videoProgress, setVideoProgress] = useState(0);
   const [processing, setProcessing] = useState(false);
   const [done, setDone] = useState(false);
   const [resultBlob, setResultBlob] = useState<Blob | null>(null);
@@ -31,6 +37,34 @@ const FileCompressor = () => {
     setUses(Number(localStorage.getItem(getUsesKey()) || 0));
     setMaxUses(Number(localStorage.getItem(getMaxUsesKey()) || DEFAULT_MAX_USES));
   }, []);
+
+  useEffect(() => {
+    if (tab !== 'video' || ffmpegLoaded) return;
+    let cancelled = false;
+
+    const load = async () => {
+      const ffmpeg = ffmpegRef.current;
+      try {
+        ffmpeg.on('progress', ({ progress }) => {
+          if (cancelled) return;
+          const pct = Math.max(0, Math.min(100, Math.round(progress * 100)));
+          setVideoProgress(pct);
+        });
+        await ffmpeg.load({
+          coreURL: await toBlobURL('https://unpkg.com/@ffmpeg/core@0.12.6/dist/ffmpeg-core.js', 'text/javascript'),
+          wasmURL: await toBlobURL('https://unpkg.com/@ffmpeg/core@0.12.6/dist/ffmpeg-core.wasm', 'application/wasm'),
+        });
+        if (!cancelled) setFfmpegLoaded(true);
+      } catch {
+        if (!cancelled) toast.error(lang === 'ar' ? 'فشل تحميل FFmpeg' : 'Failed to load FFmpeg');
+      }
+    };
+
+    void load();
+    return () => {
+      cancelled = true;
+    };
+  }, [tab, ffmpegLoaded, lang]);
 
   const recordUse = () => {
     const n = uses + 1; setUses(n);
@@ -48,10 +82,16 @@ const FileCompressor = () => {
   };
 
   const handleFile = (f: File) => {
-    setFile(f); setDone(false); setResultBlob(null);
-    if (f.type.startsWith('image/')) {
+    if (preview) URL.revokeObjectURL(preview);
+    setFile(f); setDone(false); setResultBlob(null); setResultSize(0);
+    if (tab === 'image' && f.type.startsWith('image/')) {
       setPreview(URL.createObjectURL(f));
-    } else { setPreview(null); }
+    } else if (tab === 'video' && f.type.startsWith('video/')) {
+      setPreview(URL.createObjectURL(f));
+    } else {
+      setPreview(null);
+    }
+    setVideoProgress(0);
   };
 
   const formatSize = (b: number) => {
@@ -64,7 +104,49 @@ const FileCompressor = () => {
     if (!file || uses >= maxUses) return;
     setProcessing(true);
     try {
-      if (file.type.startsWith('image/')) {
+      if (tab === 'video') {
+        if (!ffmpegLoaded) {
+          toast.error(lang === 'ar' ? 'FFmpeg لم يتم تحميله بعد' : 'FFmpeg not loaded yet');
+          return;
+        }
+        if (!file.type.startsWith('video/')) {
+          toast.error(lang === 'ar' ? 'الرجاء اختيار ملف فيديو' : 'Please choose a video file');
+          return;
+        }
+
+        const ffmpeg = ffmpegRef.current;
+        const ext = (file.name.split('.').pop() || '').toLowerCase();
+        const inputName = ext ? `input.${ext}` : 'input.mp4';
+        const outputName = 'output.mp4';
+
+        const map = {
+          small: { crf: '26', preset: 'veryfast', audio: '128k' },
+          balanced: { crf: '23', preset: 'medium', audio: '160k' },
+          high: { crf: '20', preset: 'slow', audio: '192k' },
+        } as const;
+
+        setVideoProgress(0);
+        try { await ffmpeg.deleteFile(inputName); } catch {}
+        try { await ffmpeg.deleteFile(outputName); } catch {}
+        await ffmpeg.writeFile(inputName, await fetchFile(file));
+        await ffmpeg.exec([
+          '-i', inputName,
+          '-map', '0',
+          '-c:v', 'libx264',
+          '-preset', map[videoQuality].preset,
+          '-crf', map[videoQuality].crf,
+          '-pix_fmt', 'yuv420p',
+          '-c:a', 'aac',
+          '-b:a', map[videoQuality].audio,
+          '-movflags', '+faststart',
+          outputName,
+        ]);
+        const data = await ffmpeg.readFile(outputName);
+        const blob = new Blob([data], { type: 'video/mp4' });
+        setResultBlob(blob); setResultSize(blob.size); recordUse(); setDone(true);
+        try { await ffmpeg.deleteFile(inputName); } catch {}
+        try { await ffmpeg.deleteFile(outputName); } catch {}
+      } else if (file.type.startsWith('image/')) {
         const img = new Image();
         const url = URL.createObjectURL(file);
         await new Promise<void>((res, rej) => { img.onload = () => res(); img.onerror = rej; img.src = url; });
@@ -98,6 +180,8 @@ const FileCompressor = () => {
     const a = document.createElement('a'); a.href = url;
     a.download = file.type.startsWith('image/')
       ? `compressed_${file.name.replace(/\.[^.]+$/, '')}.jpg`
+      : file.type.startsWith('video/')
+        ? `compressed_${file.name.replace(/\.[^.]+$/, '')}.mp4`
       : `compressed_${file.name}.gz`;
     a.click(); URL.revokeObjectURL(url);
   };
@@ -109,7 +193,7 @@ const FileCompressor = () => {
       {/* Header */}
       <div className="rounded-2xl bg-gradient-to-br from-blue-600 via-blue-500 to-cyan-500 p-5 text-white text-center mb-4">
         <div className="text-4xl mb-2">🗜️</div>
-        <h2 className="text-xl font-extrabold">{lang === 'ar' ? 'ضاغط الملفات والصور' : 'File & Image Compressor'}</h2>
+        <h2 className="text-xl font-extrabold">{lang === 'ar' ? 'ضغط الملفات والصور والفيديوهات' : 'Compress Files, Images, and Videos'}</h2>
         <p className="text-white/80 text-xs mt-1">{lang === 'ar' ? 'ضغط مجاني أوفلاين بجودة عالية' : 'Free offline high quality compression'}</p>
         <div className="mt-3 inline-flex items-center gap-2 bg-white/20 rounded-full px-3 py-1 text-xs font-bold">
           <span>{uses}/{maxUses} {lang === 'ar' ? 'محاولة اليوم' : 'uses today'}</span>
@@ -144,15 +228,9 @@ const FileCompressor = () => {
         </div>
       )}
 
-      {tab === 'video' ? (
-        <div className="rounded-2xl border-2 border-dashed border-muted p-10 text-center space-y-3">
-          <div className="text-5xl">🎬</div>
-          <p className="font-bold text-foreground">{lang === 'ar' ? 'ضغط الفيديو قريباً' : 'Video compression coming soon'}</p>
-          <p className="text-muted-foreground text-sm">{lang === 'ar' ? 'يتطلب معالجة كبيرة، يعمل عليها فريقنا!' : 'Requires heavy processing, our team is working on it!'}</p>
-        </div>
-      ) : !file ? (
+      {!file ? (
         <label className="relative flex flex-col items-center justify-center rounded-3xl border-2 border-dashed border-blue-300 dark:border-blue-700 bg-blue-50/50 dark:bg-blue-950/20 p-10 cursor-pointer hover:bg-blue-100/50 transition-colors">
-          <input type="file" accept={tab === 'image' ? 'image/*' : '*/*'} className="absolute inset-0 opacity-0 w-full h-full cursor-pointer"
+          <input type="file" accept={tab === 'image' ? 'image/*' : tab === 'video' ? 'video/*' : '*/*'} className="absolute inset-0 opacity-0 w-full h-full cursor-pointer"
             onChange={e => e.target.files?.[0] && handleFile(e.target.files[0])} />
           <div className="text-5xl mb-3">📁</div>
           <p className="font-extrabold text-blue-700 dark:text-blue-300 text-center text-base">
@@ -161,6 +239,8 @@ const FileCompressor = () => {
           <p className="text-sm text-muted-foreground mt-1">
             {tab === 'image'
               ? (lang === 'ar' ? 'JPG · PNG · WebP · GIF' : 'JPG · PNG · WebP · GIF')
+              : tab === 'video'
+                ? (lang === 'ar' ? 'MP4 · MOV · WebM وأكثر' : 'MP4 · MOV · WebM and more')
               : (lang === 'ar' ? 'كل أنواع الملفات' : 'All file types')}
           </p>
         </label>
@@ -181,6 +261,48 @@ const FileCompressor = () => {
             </button>
           </div>
 
+          {/* Video Quality */}
+          {tab === 'video' && (
+            <div className="bg-card border border-border rounded-2xl p-4 space-y-3">
+              <div className="flex items-center justify-between">
+                <span className="font-bold text-sm">{lang === 'ar' ? 'جودة ضغط الفيديو' : 'Video compression quality'}</span>
+                <span className="text-blue-600 font-extrabold text-sm">
+                  {lang === 'ar'
+                    ? (videoQuality === 'small' ? 'حجم أصغر' : videoQuality === 'balanced' ? 'متوازن' : 'عالي الجودة')
+                    : (videoQuality === 'small' ? 'Smaller' : videoQuality === 'balanced' ? 'Balanced' : 'High')}
+                </span>
+              </div>
+              <div className="grid grid-cols-3 gap-2">
+                {[
+                  { v: 'small', ar: 'حجم أصغر', en: 'Smaller' },
+                  { v: 'balanced', ar: 'متوازن', en: 'Balanced' },
+                  { v: 'high', ar: 'عالي', en: 'High' },
+                ].map(p => (
+                  <button key={p.v} onClick={() => setVideoQuality(p.v as any)}
+                    className={`py-2 rounded-xl text-xs font-bold border transition-colors ${videoQuality === p.v ? 'bg-blue-500 text-white border-blue-500' : 'border-border text-muted-foreground hover:border-blue-300'}`}>
+                    {lang === 'ar' ? p.ar : p.en}
+                  </button>
+                ))}
+              </div>
+              {!ffmpegLoaded && (
+                <div className="text-xs text-muted-foreground font-semibold">
+                  {lang === 'ar' ? '⏳ جارٍ تجهيز محرّك ضغط الفيديو...' : '⏳ Preparing video engine...'}
+                </div>
+              )}
+              {processing && (
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between text-xs text-muted-foreground font-semibold">
+                    <span>{lang === 'ar' ? 'التقدم' : 'Progress'}</span>
+                    <span>{videoProgress}%</span>
+                  </div>
+                  <div className="h-2 rounded-full bg-secondary overflow-hidden">
+                    <div className="h-full bg-blue-500 transition-all" style={{ width: `${videoProgress}%` }} />
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+
           {/* Quality Slider */}
           {tab === 'image' && (
             <div className="bg-card border border-border rounded-2xl p-4 space-y-3">
@@ -198,6 +320,12 @@ const FileCompressor = () => {
                   </button>
                 ))}
               </div>
+            </div>
+          )}
+
+          {tab === 'video' && preview && (
+            <div className="bg-secondary/40 border border-border rounded-2xl p-3">
+              <video src={preview} controls className="w-full rounded-xl" />
             </div>
           )}
 
@@ -220,7 +348,7 @@ const FileCompressor = () => {
           )}
 
           {!done && (
-            <button onClick={compress} disabled={processing || limitReached}
+            <button onClick={compress} disabled={processing || limitReached || (tab === 'video' && !ffmpegLoaded)}
               className="w-full py-4 rounded-2xl bg-gradient-to-r from-blue-500 to-cyan-500 text-white font-extrabold text-base shadow-lg disabled:opacity-50 active:scale-95 transition-all">
               {processing
                 ? (lang === 'ar' ? '⚙️ جاري الضغط...' : '⚙️ Compressing...')

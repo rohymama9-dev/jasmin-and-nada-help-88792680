@@ -48,21 +48,95 @@ export default defineConfig({
         // Runtime caching for images — works for ALL sizes including large coloring images
         runtimeCaching: [
           {
+            // Cache all public assets and imported images (Coloring, Stickers, Exercises)
             urlPattern: /\.(?:png|jpg|jpeg|gif|webp|svg|ico)$/i,
             handler: 'CacheFirst',
             options: {
-              cacheName: 'images-cache-v1',
+              cacheName: 'images-cache-v2',
               expiration: {
-                maxEntries: 300,
+                maxEntries: 500,
+                maxAgeSeconds: 60 * 60 * 24 * 90, // 90 days
+              },
+              cacheableResponse: { statuses: [0, 200] },
+            },
+          },
+          {
+            // Cache Quran JSON texts (API responses)
+            urlPattern: /^https:\/\/api\.alquran\.cloud\/.*/i,
+            handler: 'StaleWhileRevalidate',
+            options: {
+              cacheName: 'quran-text-cache-v1',
+              expiration: {
+                maxEntries: 200,
+                maxAgeSeconds: 60 * 60 * 24 * 30, // 30 days
+              },
+              cacheableResponse: { statuses: [0, 200] },
+            },
+          },
+          {
+            // Cache Quran MP3 audio streams
+            urlPattern: /^https:\/\/cdn\.islamic\.network\/quran\/audio\/.*\.mp3$/i,
+            handler: 'CacheFirst',
+            options: {
+              cacheName: 'quran-audio-cache-v1',
+              expiration: {
+                maxEntries: 7000,
+                maxAgeSeconds: 60 * 60 * 24 * 180,
+              },
+              cacheableResponse: { statuses: [0, 200] },
+            },
+          },
+          {
+            // Cache other audio files (exercises, etc.)
+            urlPattern: /\.(?:mp3|wav|ogg|m4a)$/i,
+            handler: 'CacheFirst',
+            options: {
+              cacheName: 'audio-cache-v1',
+              expiration: {
+                maxEntries: 100,
                 maxAgeSeconds: 60 * 60 * 24 * 60, // 60 days
               },
               cacheableResponse: { statuses: [0, 200] },
             },
           },
           {
+            // Cache JSON data files
+            urlPattern: /\.(?:json)$/i,
+            handler: 'StaleWhileRevalidate',
+            options: {
+              cacheName: 'json-cache-v1',
+              expiration: {
+                maxEntries: 100,
+                maxAgeSeconds: 60 * 60 * 24 * 30, // 30 days
+              },
+              cacheableResponse: { statuses: [0, 200] },
+            },
+          },
+          {
+            // Exclude AI/Video conversion tools from caching (they require network or WASM)
+            urlPattern: /\/tools\/(?:ai|video|format-converter)/i,
+            handler: 'NetworkOnly',
+            options: {
+              cacheName: 'tools-excluded',
+            },
+          },
+          {
+            // Google Fonts
             urlPattern: /^https:\/\/fonts\.googleapis\.com\/.*/i,
             handler: 'StaleWhileRevalidate',
             options: { cacheName: 'google-fonts-cache' },
+          },
+          {
+            // Google Fonts static files
+            urlPattern: /^https:\/\/fonts\.gstatic\.com\/.*/i,
+            handler: 'CacheFirst',
+            options: {
+              cacheName: 'google-fonts-static-cache',
+              expiration: {
+                maxEntries: 30,
+                maxAgeSeconds: 60 * 60 * 24 * 365, // 1 year
+              },
+            },
           },
         ],
         skipWaiting: true,

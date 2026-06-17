@@ -11,7 +11,6 @@ import AdPlaceholder from '@/components/AdPlaceholder';
 import ServicesBanner from '@/components/ServicesBanner';
 import StudyHabitTools from '@/components/StudyHabitTools';
 import DailyComboChallenge from '@/components/DailyComboChallenge';
-import ImageResizer from '@/components/ImageResizer';
 import { InstallBanner } from '@/components/InstallBanner';
 import floralBg from '@/assets/floral-bg.jpg';
 
@@ -113,13 +112,8 @@ const HomePage = ({ points, addPoints }: HomePageProps) => {
         >
           <span className="text-2xl shrink-0">🌸</span>
           <div className="flex-1 min-w-0">
-            <p className="text-white font-extrabold text-sm leading-tight">
-              {lang === 'ar' ? 'لتحميل التطبيق على الآيفون 📲' : 'Install app on your iPhone 📲'}
-            </p>
             <p className="text-white/80 text-[11px] mt-0.5">
-              {lang === 'ar'
-                ? 'اضغط زر المشاركة ⎋ ثم «إضافة إلى الشاشة الرئيسية»'
-                : 'Tap Share ⎋ then "Add to Home Screen"'}
+              لتحميل التطبيق على الآيفون، اضغط على زر المشاركة بالأسفل ثم اختر إضافة إلى الشاشة الرئيسية
             </p>
           </div>
           <button
@@ -158,10 +152,6 @@ const HomePage = ({ points, addPoints }: HomePageProps) => {
           {lang === 'ar' ? 'الخدمات ←' : '← Services'}
         </span>
       </div>
-
-      {/* ── Image Resizer Tool ── */}
-      <ImageResizer />
-
 
       {/* ── Divider + Challenges Section ── */}
       <div className="space-y-6 pt-4 border-t border-border/50">

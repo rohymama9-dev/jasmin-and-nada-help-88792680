@@ -1,5 +1,5 @@
-import { useEffect, useState } from 'react';
-import { GraduationCap, Volume2, ArrowLeft, Check } from 'lucide-react';
+import { useEffect, useMemo, useState } from 'react';
+import { GraduationCap, Volume2, ArrowLeft, Check, Search } from 'lucide-react';
 import { useLang } from '@/contexts/LanguageContext';
 import { lsGetJSON, lsSetJSON } from '@/lib/userStorage';
 import GlobalLeaderboard from '@/components/GlobalLeaderboard';
@@ -15,6 +15,10 @@ import MathLab from '@/components/MathLab';
 import DictationPhonics from '@/components/DictationPhonics';
 import GrammarQuestions from '@/components/GrammarQuestions';
 import { useDailyComboChallenge } from '@/contexts/DailyComboChallengeContext';
+import { getDocument, GlobalWorkerOptions } from 'pdfjs-dist';
+import workerSrc from 'pdfjs-dist/build/pdf.worker.min.mjs?url';
+
+GlobalWorkerOptions.workerSrc = workerSrc;
 
 interface Props {
   points: number;
@@ -31,7 +35,7 @@ const EducationPage = ({ points, educationPoints, addPoints }: Props) => {
   const { updateChallenge } = useDailyComboChallenge();
   
   // تاম نقل activeTab هنا لأعلى لتجنب أخطاء React Hooks
-  const [activeTab, setActiveTab] = useState<'math' | 'dictation' | 'grammarQuestions'>('math');
+  const [activeTab, setActiveTab] = useState<'math' | 'dictation' | 'grammarQuestions' | 'docs'>('math');
   
   const [activeCat, setActiveCat] = useState<LessonCategory | null>(null);
   const [activeLesson, setActiveLesson] = useState<Lesson | null>(null);
@@ -50,6 +54,119 @@ const EducationPage = ({ points, educationPoints, addPoints }: Props) => {
   }, []);
 
   const t = (ar: string, en: string) => (lang === 'ar' ? ar : en);
+
+  type DocPage = { page: number; text: string };
+  const [docFile, setDocFile] = useState<File | null>(null);
+  const [docPages, setDocPages] = useState<DocPage[]>([]);
+  const [docText, setDocText] = useState('');
+  const [docLoading, setDocLoading] = useState(false);
+  const [docError, setDocError] = useState<string | null>(null);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [searchResults, setSearchResults] = useState<Array<{ page: number; index: number; snippet: string }>>([]);
+  const [summary, setSummary] = useState('');
+
+  const normalizeWhitespace = (s: string) => s.replace(/\s+/g, ' ').trim();
+
+  const parseDocument = async (f: File) => {
+    setDocLoading(true);
+    setDocError(null);
+    setDocPages([]);
+    setDocText('');
+    setSearchQuery('');
+    setSearchResults([]);
+    setSummary('');
+    try {
+      const isPdf = f.type === 'application/pdf' || f.name.toLowerCase().endsWith('.pdf');
+      if (!isPdf) {
+        const text = normalizeWhitespace(await f.text());
+        setDocPages([{ page: 1, text }]);
+        setDocText(text);
+        return;
+      }
+
+      const buf = await f.arrayBuffer();
+      const loadingTask = getDocument({ data: new Uint8Array(buf) });
+      const pdf = await loadingTask.promise;
+      const pages: DocPage[] = [];
+      for (let pageNum = 1; pageNum <= pdf.numPages; pageNum++) {
+        const page = await pdf.getPage(pageNum);
+        const content = await page.getTextContent();
+        const text = normalizeWhitespace(
+          (content.items as Array<{ str?: string }>).map(it => it.str || '').join(' ')
+        );
+        pages.push({ page: pageNum, text });
+      }
+      setDocPages(pages);
+      setDocText(pages.map(p => p.text).join('\n'));
+    } catch {
+      setDocError(t('فشل قراءة المستند', 'Failed to read document'));
+    } finally {
+      setDocLoading(false);
+    }
+  };
+
+  const computedResults = useMemo(() => {
+    const q = normalizeWhitespace(searchQuery);
+    if (!q || !docPages.length) return [];
+    const needle = q.toLowerCase();
+    const results: Array<{ page: number; index: number; snippet: string }> = [];
+    for (const p of docPages) {
+      const hay = p.text;
+      const lower = hay.toLowerCase();
+      let start = 0;
+      for (;;) {
+        const idx = lower.indexOf(needle, start);
+        if (idx === -1) break;
+        const before = hay.slice(Math.max(0, idx - 60), idx);
+        const match = hay.slice(idx, idx + q.length);
+        const after = hay.slice(idx + q.length, Math.min(hay.length, idx + q.length + 60));
+        results.push({ page: p.page, index: idx, snippet: `${before}${match}${after}` });
+        start = idx + q.length;
+        if (results.length >= 50) return results;
+      }
+    }
+    return results;
+  }, [docPages, searchQuery]);
+
+  useEffect(() => {
+    setSearchResults(computedResults);
+  }, [computedResults]);
+
+  const summarizeText = (text: string) => {
+    const cleaned = normalizeWhitespace(text);
+    if (!cleaned) return '';
+    const rawSentences = cleaned.split(/(?<=[.!?؟])\s+/).map(s => s.trim()).filter(Boolean);
+    const sentences = rawSentences.slice(0, 400);
+    if (sentences.length <= 3) return sentences.join(' ');
+
+    const stop = new Set([
+      'the','a','an','and','or','to','of','in','on','for','with','as','at','by','from','is','are','was','were','be','been','it','this','that','these','those',
+      'و','في','على','إلى','من','عن','أن','إن','كان','كانت','يكون','تكون','هو','هي','هم','هن','هذا','هذه','ذلك','تلك','هناك','هنا','ثم','أو','لكن','كما','ما','لا','لم','لن','قد','حتى',
+    ]);
+
+    const freq = new Map<string, number>();
+    const tokenize = (s: string) =>
+      s
+        .toLowerCase()
+        .replace(/[^\p{L}\p{N}\s]+/gu, ' ')
+        .split(/\s+/)
+        .filter(w => w.length >= 2 && !stop.has(w));
+
+    for (const s of sentences) {
+      for (const w of tokenize(s)) freq.set(w, (freq.get(w) || 0) + 1);
+    }
+
+    const scored = sentences.map((s, i) => {
+      const words = tokenize(s);
+      const sum = words.reduce((acc, w) => acc + (freq.get(w) || 0), 0);
+      const score = sum / Math.max(8, words.length);
+      return { i, s, score };
+    });
+
+    const take = Math.min(7, Math.max(3, Math.round(sentences.length * 0.15)));
+    const top = scored.sort((a, b) => b.score - a.score).slice(0, take).sort((a, b) => a.i - b.i);
+    return top.map(x => x.s).join(' ');
+  };
 
   const completeLesson = (lesson: Lesson) => {
     if (completed.has(lesson.id)) {
@@ -224,6 +341,12 @@ const EducationPage = ({ points, educationPoints, addPoints }: Props) => {
           >
             {t('أسئلة قواعد', 'Grammar Questions')}
           </button>
+          <button
+            onClick={() => setActiveTab('docs')}
+            className={`px-4 py-2 rounded-xl text-xs font-bold transition-all ${activeTab === 'docs' ? 'gradient-primary text-white' : 'bg-secondary text-muted-foreground'}`}
+          >
+            {t('أداة المستندات', 'Document Tool')}
+          </button>
         </div>
       </div>
 
@@ -241,6 +364,119 @@ const EducationPage = ({ points, educationPoints, addPoints }: Props) => {
 
       {activeTab === 'dictation' && (
         <DictationPhonics onScore={addPoints} />
+      )}
+
+      {activeTab === 'docs' && (
+        <div className="glass-card rounded-2xl p-4 space-y-4">
+          <div className="flex items-center justify-between">
+            <h3 className="font-bold text-foreground text-sm">{t('أداة المستندات التعليمية', 'Education Document Tool')}</h3>
+            <span className="text-[10px] text-muted-foreground font-semibold">{t('PDF أو TXT', 'PDF or TXT')}</span>
+          </div>
+
+          {!docFile ? (
+            <label className="relative flex flex-col items-center justify-center rounded-2xl border-2 border-dashed border-border bg-secondary/30 p-8 cursor-pointer hover:bg-secondary/50 transition-colors">
+              <input
+                type="file"
+                accept=".pdf,application/pdf,.txt,text/plain"
+                className="absolute inset-0 opacity-0 w-full h-full cursor-pointer"
+                onChange={e => {
+                  const f = e.target.files?.[0];
+                  if (!f) return;
+                  setDocFile(f);
+                  void parseDocument(f);
+                }}
+              />
+              <div className="text-3xl mb-2">📄</div>
+              <p className="font-extrabold text-foreground text-sm">{t('ارفع ملف PDF أو TXT', 'Upload a PDF or TXT')}</p>
+              <p className="text-xs text-muted-foreground mt-1">{t('سيتم استخراج النص محلياً بدون إنترنت', 'Text is extracted locally without internet')}</p>
+            </label>
+          ) : (
+            <div className="bg-secondary/40 border border-border rounded-2xl p-3 flex items-center gap-3">
+              <div className="text-2xl">📄</div>
+              <div className="flex-1 min-w-0">
+                <p className="font-bold text-foreground text-sm truncate">{docFile.name}</p>
+                <p className="text-[10px] text-muted-foreground">
+                  {docLoading ? t('جارٍ المعالجة...', 'Processing...') : t('جاهز', 'Ready')}
+                  {docPages.length ? ` • ${docPages.length} ${t('صفحة', 'pages')}` : ''}
+                </p>
+              </div>
+              <button
+                onClick={() => {
+                  setDocFile(null);
+                  setDocPages([]);
+                  setDocText('');
+                  setDocError(null);
+                  setSearchQuery('');
+                  setSearchResults([]);
+                  setSummary('');
+                }}
+                className="px-3 py-2 rounded-xl bg-secondary text-muted-foreground text-xs font-bold hover:bg-secondary/80 transition"
+              >
+                {t('إزالة', 'Remove')}
+              </button>
+            </div>
+          )}
+
+          {docError && (
+            <div className="bg-destructive/10 border border-destructive/30 rounded-2xl p-3 text-sm text-destructive font-bold">
+              {docError}
+            </div>
+          )}
+
+          <div className="space-y-2">
+            <div className="flex items-center gap-2">
+              <div className="p-2 rounded-xl bg-secondary text-muted-foreground">
+                <Search size={16} />
+              </div>
+              <input
+                value={searchQuery}
+                onChange={e => setSearchQuery(e.target.value)}
+                placeholder={t('ابحث داخل المستند...', 'Search inside the document...')}
+                disabled={!docText || docLoading}
+                className="flex-1 px-3 py-2 rounded-xl bg-secondary/60 border border-border text-sm outline-none focus:ring-2 ring-primary disabled:opacity-60"
+              />
+            </div>
+
+            {searchQuery.trim() && (
+              <div className="text-xs text-muted-foreground font-semibold">
+                {t('نتائج', 'Results')}: {searchResults.length}
+              </div>
+            )}
+
+            {searchResults.length > 0 && (
+              <div className="space-y-2 max-h-64 overflow-auto pr-1">
+                {searchResults.map((r, i) => (
+                  <div key={`${r.page}-${r.index}-${i}`} className="rounded-2xl border border-border bg-card p-3">
+                    <div className="text-[10px] text-muted-foreground font-bold mb-1">
+                      {t('صفحة', 'Page')} {r.page} • #{r.index}
+                    </div>
+                    <div className="text-sm text-foreground leading-relaxed" style={{ textAlign: 'start' }}>
+                      {r.snippet}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+
+          <div className="space-y-2">
+            <div className="flex items-center justify-between">
+              <p className="font-bold text-foreground text-sm">{t('تلخيص Extractive', 'Extractive Summarization')}</p>
+              <button
+                onClick={() => setSummary(summarizeText(docText))}
+                disabled={!docText || docLoading}
+                className="px-3 py-2 rounded-xl gradient-primary text-white text-xs font-extrabold disabled:opacity-60"
+              >
+                {t('تلخيص', 'Summarize')}
+              </button>
+            </div>
+            {summary && (
+              <div className="rounded-2xl border border-border bg-secondary/30 p-3 text-sm leading-relaxed" style={{ textAlign: 'start' }}>
+                {summary}
+              </div>
+            )}
+          </div>
+        </div>
       )}
     </div>
   );

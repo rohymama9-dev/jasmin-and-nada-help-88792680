@@ -56,7 +56,7 @@ const OnboardingScreen = ({ onComplete }: OnboardingScreenProps) => {
   };
 
   return (
-    <div className="min-h-screen bg-background flex items-center justify-center p-5">
+    <div className="min-h-[100dvh] bg-background flex items-center justify-center p-5 safe-area-padding">
       <div className="w-full max-w-md space-y-6 animate-slide-up">
         <div className="text-center space-y-2">
           <span className="text-6xl">🌸</span>

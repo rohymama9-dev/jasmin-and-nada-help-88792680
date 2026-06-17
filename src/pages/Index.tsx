@@ -52,7 +52,7 @@ const AppContent = () => {
   }
 
   return (
-    <div dir={dir} className="min-h-screen bg-background max-w-lg mx-auto">
+    <div dir={dir} className="min-h-[100dvh] bg-background max-w-lg mx-auto safe-area-padding">
       {showFlowers && (
         <FlowerEntryAnimation
           name={guestName}

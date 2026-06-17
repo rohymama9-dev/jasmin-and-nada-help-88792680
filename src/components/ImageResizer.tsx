@@ -1,10 +1,8 @@
-import { useState, useEffect, useRef, useCallback } from 'react';
+import { useState, useEffect } from 'react';
 import { useLang } from '@/contexts/LanguageContext';
-import { usePoints } from '@/hooks/usePoints';
-import { Unlock, Download, PlayCircle, Lock, Crop } from 'lucide-react';
+import { Download, PlayCircle, Crop } from 'lucide-react';
 import { toast } from 'sonner';
 
-const UNLOCK_KEY = 'app-imageresizer-unlocked';
 const getUsesKey = () => {
   const d = new Date();
   return `app-imageresizer-uses-${d.getFullYear()}-${d.getMonth()}-${d.getDate()}`;
@@ -26,37 +24,24 @@ const PRESETS = [
 
 const ImageResizer = () => {
   const { lang } = useLang();
-  const { points, subtractPoints } = usePoints();
-  const [unlocked, setUnlocked] = useState(() => localStorage.getItem(UNLOCK_KEY) === 'true');
   const [uses, setUses] = useState(0);
   const [maxUses, setMaxUses] = useState(DEFAULT_MAX_USES);
   const [file, setFile] = useState<File | null>(null);
   const [originalImg, setOriginalImg] = useState<HTMLImageElement | null>(null);
+  const [origPxW, setOrigPxW] = useState(0);
+  const [origPxH, setOrigPxH] = useState(0);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [width, setWidth] = useState(1080);
   const [height, setHeight] = useState(1080);
   const [unit, setUnit] = useState<'px' | 'cm'>('px');
-  const [lockRatio, setLockRatio] = useState(true);
   const [origRatio, setOrigRatio] = useState(1);
   const [processing, setProcessing] = useState(false);
   const [watchingAd, setWatchingAd] = useState(false);
-  const canvasRef = useRef<HTMLCanvasElement>(null);
 
   useEffect(() => {
     setUses(Number(localStorage.getItem(getUsesKey()) || 0));
     setMaxUses(Number(localStorage.getItem(getMaxUsesKey()) || DEFAULT_MAX_USES));
   }, []);
-
-  const handleUnlock = () => {
-    if (points >= 70) {
-      subtractPoints(70);
-      localStorage.setItem(UNLOCK_KEY, 'true');
-      setUnlocked(true);
-      toast.success(lang === 'ar' ? 'تم فتح الأداة! 🌟' : 'Tool unlocked! 🌟');
-    } else {
-      toast.error(lang === 'ar' ? 'نقاطك غير كافية' : 'Not enough points');
-    }
-  };
 
   const watchAd = () => {
     setWatchingAd(true);
@@ -75,14 +60,18 @@ const ImageResizer = () => {
 
   const pxFromCm = (cm: number) => Math.round(cm * 118.11);
   const cmFromPx = (px: number) => parseFloat((px / 118.11).toFixed(2));
+  const clamp = (v: number, min: number, max: number) => Math.max(min, Math.min(max, v));
 
   const handleFileChange = (f: File) => {
+    if (previewUrl) URL.revokeObjectURL(previewUrl);
     const url = URL.createObjectURL(f);
     setFile(f);
     setPreviewUrl(url);
     const img = new Image();
     img.onload = () => {
       setOriginalImg(img);
+      setOrigPxW(img.width);
+      setOrigPxH(img.height);
       const ratio = img.width / img.height;
       setOrigRatio(ratio);
       setWidth(img.width);
@@ -92,26 +81,34 @@ const ImageResizer = () => {
   };
 
   const handleWidthChange = (val: number) => {
-    setWidth(val);
-    if (lockRatio && origRatio) {
-      const px = unit === 'cm' ? pxFromCm(val) : val;
-      const newH = Math.round(px / origRatio);
-      setHeight(unit === 'cm' ? cmFromPx(newH) : newH);
-    }
+    if (!origRatio || !origPxW || !origPxH) return;
+    const pxRaw = unit === 'cm' ? pxFromCm(val) : val;
+    const px = clamp(pxRaw, 1, origPxW);
+    const newHpx = clamp(Math.round(px / origRatio), 1, origPxH);
+    const newWVal = unit === 'cm' ? cmFromPx(px) : px;
+    const newHVal = unit === 'cm' ? cmFromPx(newHpx) : newHpx;
+    setWidth(newWVal);
+    setHeight(newHVal);
   };
 
   const handleHeightChange = (val: number) => {
-    setHeight(val);
-    if (lockRatio && origRatio) {
-      const px = unit === 'cm' ? pxFromCm(val) : val;
-      const newW = Math.round(px * origRatio);
-      setWidth(unit === 'cm' ? cmFromPx(newW) : newW);
-    }
+    if (!origRatio || !origPxW || !origPxH) return;
+    const pxRaw = unit === 'cm' ? pxFromCm(val) : val;
+    const px = clamp(pxRaw, 1, origPxH);
+    const newWpx = clamp(Math.round(px * origRatio), 1, origPxW);
+    const newWVal = unit === 'cm' ? cmFromPx(newWpx) : newWpx;
+    const newHVal = unit === 'cm' ? cmFromPx(px) : px;
+    setWidth(newWVal);
+    setHeight(newHVal);
   };
 
   const applyPreset = (w: number, h: number) => {
-    setWidth(unit === 'cm' ? cmFromPx(w) : w);
-    setHeight(unit === 'cm' ? cmFromPx(h) : h);
+    if (!origPxW || !origPxH) return;
+    const scale = Math.min(1, w / origPxW, h / origPxH);
+    const tw = Math.max(1, Math.round(origPxW * scale));
+    const th = Math.max(1, Math.round(origPxH * scale));
+    setWidth(unit === 'cm' ? cmFromPx(tw) : tw);
+    setHeight(unit === 'cm' ? cmFromPx(th) : th);
   };
 
   const switchUnit = (u: 'px' | 'cm') => {
@@ -130,8 +127,8 @@ const ImageResizer = () => {
     if (!originalImg || uses >= maxUses) return;
     setProcessing(true);
     try {
-      const targetW = unit === 'cm' ? pxFromCm(width) : width;
-      const targetH = unit === 'cm' ? pxFromCm(height) : height;
+      const targetW = clamp(unit === 'cm' ? pxFromCm(width) : width, 1, origPxW || originalImg.width);
+      const targetH = clamp(Math.round(targetW / (origRatio || (originalImg.width / originalImg.height))), 1, origPxH || originalImg.height);
 
       const canvas = document.createElement('canvas');
       canvas.width = targetW;
@@ -183,42 +180,6 @@ const ImageResizer = () => {
     }
   };
 
-  // ── Locked state ──
-  if (!unlocked) {
-    return (
-      <div dir={lang === 'ar' ? 'rtl' : 'ltr'}
-        className="glass-card rounded-2xl p-6 text-center space-y-4 bg-gradient-to-br from-orange-50 to-amber-50 dark:from-orange-950/40 dark:to-amber-950/40 border border-orange-100 dark:border-orange-900/50">
-        <div className="w-16 h-16 mx-auto bg-gradient-to-br from-orange-500 to-amber-500 rounded-2xl flex items-center justify-center text-white shadow-lg">
-          <Crop size={32} />
-        </div>
-        <div>
-          <h3 className="font-bold text-lg text-foreground mb-1">
-            {lang === 'ar' ? '🖼️ معدّل المقاسات الدقيق (مثل كانفا)' : '🖼️ Precision Resizer (like Canva)'}
-          </h3>
-          <p className="text-sm text-muted-foreground mb-2">
-            {lang === 'ar'
-              ? 'غيّر أبعاد صورك بدقة بالبكسل أو السم مع الحفاظ على أعلى جودة.'
-              : 'Resize images precisely by px or cm while preserving maximum quality.'}
-          </p>
-          <div className="flex flex-wrap gap-2 justify-center mb-3">
-            {['Instagram', 'Story', 'YouTube', 'A4'].map(p => (
-              <span key={p} className="text-xs bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-300 px-2 py-0.5 rounded-full font-medium">{p}</span>
-            ))}
-          </div>
-          <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-rose-100 text-rose-600 dark:bg-rose-900/30 dark:text-rose-400 text-xs font-bold mb-4">
-            <span className="line-through opacity-70">120 🪙</span>
-            <span>🔥 {lang === 'ar' ? 'عرض: 70 نقطة فقط!' : 'Offer: 70 pts only!'}</span>
-          </div>
-        </div>
-        <button onClick={handleUnlock}
-          className="w-full py-3 rounded-xl bg-gradient-to-r from-orange-500 to-amber-500 text-white font-bold shadow-md active:scale-95 transition-all flex items-center justify-center gap-2">
-          <Unlock size={18} />
-          {lang === 'ar' ? 'افتح الأداة (70 🪙)' : 'Unlock Tool (70 🪙)'}
-        </button>
-      </div>
-    );
-  }
-
   const limitReached = uses >= maxUses;
 
   // ── Upload Screen ──
@@ -226,8 +187,10 @@ const ImageResizer = () => {
     return (
       <div dir={lang === 'ar' ? 'rtl' : 'ltr'} className="space-y-4">
         <div className="rounded-2xl bg-gradient-to-br from-orange-500 to-amber-500 p-5 text-white text-center">
-          <div className="text-4xl mb-2">🖼️</div>
-          <h2 className="text-xl font-extrabold">{lang === 'ar' ? 'معدّل المقاسات' : 'Image Resizer'}</h2>
+          <div className="w-14 h-14 mx-auto bg-white/20 rounded-2xl flex items-center justify-center mb-2">
+            <Crop size={28} />
+          </div>
+          <h2 className="text-xl font-extrabold">{lang === 'ar' ? 'معدّل المقاسات الدقيق' : 'Precision Resizer'}</h2>
           <p className="text-white/80 text-xs mt-1">{lang === 'ar' ? 'غيّر حجم صورتك بدون فقدان الجودة' : 'Resize without losing quality'}</p>
           <div className="mt-2 inline-flex bg-white/20 rounded-full px-3 py-1 text-xs font-bold">
             {uses}/{maxUses} {lang === 'ar' ? 'محاولة اليوم' : 'uses today'}
@@ -262,9 +225,8 @@ const ImageResizer = () => {
     );
   }
 
-  // ── Editor Screen (Canva-like) ──
-  const displayW = unit === 'cm' ? width : width;
-  const displayH = unit === 'cm' ? height : height;
+  const displayW = width;
+  const displayH = height;
 
   const previewMaxW = 280;
   const pxW = unit === 'cm' ? pxFromCm(width) : width;
@@ -277,7 +239,7 @@ const ImageResizer = () => {
     <div dir={lang === 'ar' ? 'rtl' : 'ltr'} className="space-y-4">
       {/* Header */}
       <div className="flex items-center justify-between">
-        <button onClick={() => { setFile(null); setPreviewUrl(null); setOriginalImg(null); }}
+        <button onClick={() => { if (previewUrl) URL.revokeObjectURL(previewUrl); setFile(null); setPreviewUrl(null); setOriginalImg(null); setOrigPxW(0); setOrigPxH(0); }}
           className="text-orange-600 font-bold text-sm">
           {lang === 'ar' ? '→ رجوع' : '← Back'}
         </button>
@@ -286,18 +248,13 @@ const ImageResizer = () => {
         </div>
       </div>
 
-      {/* Visual Preview (Canva-like canvas area) */}
+      {/* Visual Preview */}
       <div className="bg-[#f0f4f8] dark:bg-slate-800 rounded-2xl p-4 flex flex-col items-center justify-center min-h-[220px] border border-border relative overflow-hidden">
-        {/* Grid background like Canva */}
         <div className="absolute inset-0 opacity-30"
           style={{ backgroundImage: 'linear-gradient(#ccc 1px, transparent 1px), linear-gradient(90deg, #ccc 1px, transparent 1px)', backgroundSize: '20px 20px' }} />
         {previewUrl && (
           <div className="relative z-10 shadow-2xl" style={{ width: previewW, height: previewH, minWidth: 40, minHeight: 40 }}>
-            <img src={previewUrl} className="w-full h-full object-fill" alt="preview" />
-            {/* Corner handles */}
-            {['top-0 left-0', 'top-0 right-0', 'bottom-0 left-0', 'bottom-0 right-0'].map((pos, i) => (
-              <div key={i} className={`absolute w-3 h-3 bg-orange-500 border-2 border-white rounded-sm -m-1.5 ${pos}`} />
-            ))}
+            <img src={previewUrl} className="w-full h-full object-contain" alt="preview" />
           </div>
         )}
         <div className="absolute bottom-2 right-2 z-10 bg-black/60 text-white text-[10px] font-mono px-2 py-0.5 rounded">
@@ -346,15 +303,6 @@ const ImageResizer = () => {
               className="w-full text-center text-lg font-mono font-bold bg-secondary border-none rounded-xl p-3 outline-none focus:ring-2 ring-orange-400" />
           </div>
         </div>
-
-        {/* Lock ratio */}
-        <button onClick={() => setLockRatio(!lockRatio)}
-          className={`w-full flex items-center justify-center gap-2 py-2 rounded-xl text-sm font-bold transition-colors ${lockRatio ? 'bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-300' : 'bg-secondary text-muted-foreground'}`}>
-          <Lock size={14} />
-          {lockRatio
-            ? (lang === 'ar' ? '🔒 نسبة الأبعاد مقفولة' : '🔒 Aspect ratio locked')
-            : (lang === 'ar' ? '🔓 نسبة الأبعاد حرة' : '🔓 Aspect ratio free')}
-        </button>
       </div>
 
       {/* Daily limit */}

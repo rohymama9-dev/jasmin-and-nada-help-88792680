@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { BookOpenText, Palette, BookOpen, Wand2, UtensilsCrossed, Lock, Check, Sparkles, Sticker, GraduationCap, FileArchive, FileCode2 } from 'lucide-react';
+import { BookOpenText, Palette, BookOpen, Wand2, UtensilsCrossed, Lock, Check, Sparkles, Sticker, GraduationCap, FileArchive, FileCode2, Crop } from 'lucide-react';
 import { useLang } from '@/contexts/LanguageContext';
 import { toast } from '@/hooks/use-toast';
 import KidsStories from '@/components/KidsStories';
@@ -14,6 +14,7 @@ import CombinedOrderForm from '@/components/CombinedOrderForm';
 import PersonalityQuizzes from '@/components/PersonalityQuizzes';
 import FileCompressor from '@/components/FileCompressor';
 import FormatConverter from '@/components/FormatConverter';
+import ImageResizer from '@/components/ImageResizer';
 
 interface ServicesPageProps {
   points: number;
@@ -42,8 +43,9 @@ const services: ServiceCard[] = [
   { id: 'quiz', icon: GraduationCap, nameAr: 'محرك الاختبارات', nameEn: 'Quiz Engine', cost: 20, color: 'from-fuchsia-500 to-purple-700' },
   { id: 'personalityquizzes', icon: Sparkles, nameAr: 'اختبارات الشخصية', nameEn: 'Personality Quizzes', cost: 20, color: 'from-purple-500 to-pink-600' },
   { id: 'contact', icon: Sparkles, nameAr: 'مراسلة المسؤولة (مجاني)', nameEn: 'Contact Admin (Free)', cost: 0, color: 'from-emerald-500 to-teal-600' },
-  { id: 'compressor', icon: FileArchive, nameAr: '🗜️ ضغط الملفات والصور', nameEn: '🗜️ File & Image Compressor', cost: 80, color: 'from-blue-500 to-cyan-600' },
+  { id: 'compressor', icon: FileArchive, nameAr: '🗜️ ضغط الملفات والصور والفيديوهات', nameEn: '🗜️ Compress Files, Images, and Videos', cost: 80, color: 'from-blue-500 to-cyan-600' },
   { id: 'converter', icon: FileCode2, nameAr: '🔄 محول الصيغ الشامل', nameEn: '🔄 Universal Format Converter', cost: 80, color: 'from-purple-500 to-violet-600' },
+  { id: 'resizer', icon: Crop, nameAr: '🖼️ معدّل المقاسات الدقيق', nameEn: '🖼️ Precision Resizer', cost: 70, color: 'from-orange-500 to-amber-600' },
 ];
 
 const ServicesPage = ({ points, addPoints }: ServicesPageProps) => {
@@ -96,6 +98,7 @@ const ServicesPage = ({ points, addPoints }: ServicesPageProps) => {
         case 'contact': return <CombinedOrderForm onClose={() => setActiveService(null)} lang={lang} hideOffers={true} />;
         case 'compressor': return <FileCompressor />;
         case 'converter': return <FormatConverter />;
+        case 'resizer': return <ImageResizer />;
         default: return null;
       }
     };

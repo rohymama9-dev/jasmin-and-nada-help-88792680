@@ -1,7 +1,9 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useLang } from '@/contexts/LanguageContext';
-import { Download, X, Check, PlayCircle } from 'lucide-react';
+import { Download, X, Check, PlayCircle, Video, Music } from 'lucide-react';
 import { toast } from 'sonner';
+import { FFmpeg } from '@ffmpeg/ffmpeg';
+import { fetchFile, toBlobURL } from '@ffmpeg/util';
 
 const getUsesKey = () => {
   const d = new Date();
@@ -16,8 +18,7 @@ const DEFAULT_MAX_USES = 5;
 const CATEGORIES = [
   { id: 'image', emoji: '🖼️', ar: 'تحويل الصور', en: 'Image Conversion', desc_ar: 'JPG ↔ PNG ↔ WebP', desc_en: 'JPG ↔ PNG ↔ WebP', color: 'from-emerald-400 to-teal-500', border: 'border-emerald-200', soon: false },
   { id: 'file', emoji: '📄', ar: 'ضغط الملفات', en: 'File to GZ', desc_ar: 'تحويل أي ملف إلى GZ', desc_en: 'Convert any file to GZ', color: 'from-blue-400 to-indigo-500', border: 'border-blue-200', soon: false },
-  { id: 'audio', emoji: '🎵', ar: 'تحويل الصوت', en: 'Audio', desc_ar: 'قريباً', desc_en: 'Coming soon', color: 'from-purple-400 to-violet-500', border: 'border-purple-200', soon: true },
-  { id: 'video', emoji: '🎬', ar: 'تحويل الفيديو', en: 'Video', desc_ar: 'قريباً', desc_en: 'Coming soon', color: 'from-rose-400 to-pink-500', border: 'border-rose-200', soon: true },
+  { id: 'media', emoji: '🎬', ar: 'تحويل الصوت/الفيديو', en: 'Audio/Video', desc_ar: 'تحويل إلى MP3 أو MP4', desc_en: 'Convert to MP3 or MP4', color: 'from-rose-400 to-pink-500', border: 'border-rose-200', soon: false },
   { id: 'doc', emoji: '📑', ar: 'المستندات', en: 'Documents', desc_ar: 'قريباً', desc_en: 'Coming soon', color: 'from-amber-400 to-orange-500', border: 'border-amber-200', soon: true },
   { id: 'ebook', emoji: '📚', ar: 'الكتب الإلكترونية', en: 'Ebooks', desc_ar: 'قريباً', desc_en: 'Coming soon', color: 'from-cyan-400 to-sky-500', border: 'border-cyan-200', soon: true },
 ];
@@ -39,12 +40,36 @@ const FormatConverter = () => {
   const [processing, setProcessing] = useState(false);
   const [done, setDone] = useState(false);
   const [resultBlob, setResultBlob] = useState<Blob | null>(null);
+  const [resultKind, setResultKind] = useState<'image' | 'file' | 'mp3' | 'mp4' | null>(null);
   const [watchingAd, setWatchingAd] = useState(false);
+  const ffmpegRef = useRef(new FFmpeg());
+  const [ffmpegLoaded, setFfmpegLoaded] = useState(false);
 
   useEffect(() => {
     setUses(Number(localStorage.getItem(getUsesKey()) || 0));
     setMaxUses(Number(localStorage.getItem(getMaxUsesKey()) || DEFAULT_MAX_USES));
-  }, []);
+    
+    // Load FFmpeg
+    const loadFFmpeg = async () => {
+      const ffmpeg = ffmpegRef.current;
+      ffmpeg.on('log', ({ message }) => console.log(message));
+      
+      try {
+        await ffmpeg.load({
+          coreURL: await toBlobURL('https://unpkg.com/@ffmpeg/core@0.12.6/dist/ffmpeg-core.js', 'text/javascript'),
+          wasmURL: await toBlobURL('https://unpkg.com/@ffmpeg/core@0.12.6/dist/ffmpeg-core.wasm', 'application/wasm'),
+        });
+        setFfmpegLoaded(true);
+      } catch (error) {
+        console.error('Failed to load FFmpeg:', error);
+        toast.error(lang === 'ar' ? 'فشل تحميل FFmpeg' : 'Failed to load FFmpeg');
+      }
+    };
+    
+    if (category === 'media') {
+      loadFFmpeg();
+    }
+  }, [category, lang]);
 
   const recordUse = () => {
     const n = uses + 1; setUses(n);
@@ -62,14 +87,15 @@ const FormatConverter = () => {
   };
 
   const handleFile = (f: File) => {
-    setFile(f); setDone(false); setResultBlob(null);
-    if (f.type.startsWith('image/')) setPreview(URL.createObjectURL(f));
+    if (preview) URL.revokeObjectURL(preview);
+    setFile(f); setDone(false); setResultBlob(null); setResultKind(null);
+    if (f.type.startsWith('image/') || f.type.startsWith('video/')) setPreview(URL.createObjectURL(f));
     else setPreview(null);
   };
 
   const limitReached = uses >= maxUses;
 
-  const convert = async () => {
+  const convert = async (mediaTarget?: 'mp3' | 'mp4') => {
     if (!file || limitReached) return;
     setProcessing(true);
     try {
@@ -86,7 +112,7 @@ const FormatConverter = () => {
         const blob = await new Promise<Blob>((res, rej) =>
           canvas.toBlob(b => b ? res(b) : rej(new Error('Failed')), targetFormat, 0.95)
         );
-        setResultBlob(blob); recordUse(); setDone(true);
+        setResultBlob(blob); setResultKind('image'); recordUse(); setDone(true);
         URL.revokeObjectURL(url);
       } else if (category === 'file') {
         if (!('CompressionStream' in window)) {
@@ -95,13 +121,69 @@ const FormatConverter = () => {
         }
         const stream = file.stream().pipeThrough(new (window as any).CompressionStream('gzip'));
         const blob = await new Response(stream).blob();
-        setResultBlob(blob); recordUse(); setDone(true);
+        setResultBlob(blob); setResultKind('file'); recordUse(); setDone(true);
+      } else if (category === 'media') {
+        if (!ffmpegLoaded) {
+          toast.error(lang === 'ar' ? 'FFmpeg لم يتم تحميله بعد' : 'FFmpeg not loaded yet');
+          return;
+        }
+
+        const ffmpeg = ffmpegRef.current;
+
+        const ext = (file.name.split('.').pop() || '').toLowerCase();
+        const inputFileName = ext ? `input.${ext}` : 'input.bin';
+        const outputFileName = mediaTarget === 'mp4' ? 'output.mp4' : 'output.mp3';
+
+        try { await ffmpeg.deleteFile(inputFileName); } catch {}
+        try { await ffmpeg.deleteFile(outputFileName); } catch {}
+        await ffmpeg.writeFile(inputFileName, await fetchFile(file));
+
+        if (mediaTarget === 'mp4') {
+          await ffmpeg.exec([
+            '-i', inputFileName,
+            '-c:v', 'libx264',
+            '-preset', 'medium',
+            '-crf', '20',
+            '-pix_fmt', 'yuv420p',
+            '-c:a', 'aac',
+            '-b:a', '160k',
+            '-movflags', '+faststart',
+            outputFileName,
+          ]);
+          const data = await ffmpeg.readFile(outputFileName);
+          const blob = new Blob([data], { type: 'video/mp4' });
+          setResultBlob(blob); setResultKind('mp4'); recordUse(); setDone(true);
+        } else if (mediaTarget === 'mp3') {
+          await ffmpeg.exec([
+            '-i', inputFileName,
+            '-vn',
+            '-c:a', 'libmp3lame',
+            '-q:a', '2',
+            '-ar', '44100',
+            '-ac', '2',
+            outputFileName,
+          ]);
+          const data = await ffmpeg.readFile(outputFileName);
+          const blob = new Blob([data], { type: 'audio/mpeg' });
+          setResultBlob(blob); setResultKind('mp3'); recordUse(); setDone(true);
+        } else {
+          toast.error(lang === 'ar' ? 'اختر نوع التحويل' : 'Choose a conversion type');
+        }
+
+        try { await ffmpeg.deleteFile(inputFileName); } catch {}
+        try { await ffmpeg.deleteFile(outputFileName); } catch {}
       }
-    } catch { toast.error(lang === 'ar' ? 'حدث خطأ أثناء التحويل' : 'Conversion error'); }
+    } catch (error) { 
+      console.error('Conversion error:', error);
+      toast.error(lang === 'ar' ? 'حدث خطأ أثناء التحويل' : 'Conversion error'); 
+    }
     finally { setProcessing(false); }
   };
 
   const getExt = () => {
+    if (resultKind === 'file') return '.gz';
+    if (resultKind === 'mp3') return '.mp3';
+    if (resultKind === 'mp4') return '.mp4';
     if (category === 'file') return '.gz';
     return '.' + (IMAGE_FORMATS.find(f => f.value === targetFormat)?.ext || 'webp');
   };
@@ -207,7 +289,7 @@ const FormatConverter = () => {
       {!file ? (
         <label className="relative flex flex-col items-center justify-center rounded-3xl border-2 border-dashed border-purple-300 dark:border-purple-700 bg-purple-50/50 dark:bg-purple-950/20 p-10 cursor-pointer hover:bg-purple-100/40 transition-colors">
           <input type="file"
-            accept={category === 'image' ? 'image/*' : '*/*'}
+            accept={category === 'image' ? 'image/*' : category === 'media' ? 'video/*,audio/*' : '*/*'}
             className="absolute inset-0 opacity-0 w-full h-full cursor-pointer"
             onChange={e => e.target.files?.[0] && handleFile(e.target.files[0])} />
           <div className="text-5xl mb-3">{catInfo.emoji}</div>
@@ -217,6 +299,8 @@ const FormatConverter = () => {
           <p className="text-sm text-muted-foreground mt-1">
             {category === 'image'
               ? (lang === 'ar' ? 'JPG · PNG · WebP · GIF · BMP' : 'JPG · PNG · WebP · GIF · BMP')
+              : category === 'media'
+                ? (lang === 'ar' ? 'فيديو/صوت لتحويله إلى MP3 أو MP4' : 'Video/Audio to convert to MP3 or MP4')
               : (lang === 'ar' ? 'كل أنواع الملفات' : 'All file types')}
           </p>
         </label>
@@ -250,6 +334,50 @@ const FormatConverter = () => {
             </div>
           )}
 
+          {category === 'media' && (
+            <div className="space-y-3">
+              {!ffmpegLoaded && (
+                <div className="text-xs text-muted-foreground font-semibold">
+                  {lang === 'ar' ? '⏳ جارٍ تجهيز محرّك التحويل...' : '⏳ Preparing conversion engine...'}
+                </div>
+              )}
+
+              {file.type.startsWith('video/') && preview && (
+                <div className="bg-secondary/40 border border-border rounded-2xl p-3">
+                  <video src={preview} controls className="w-full rounded-xl" />
+                </div>
+              )}
+
+              <div className="bg-card border border-border rounded-2xl p-4 space-y-3">
+                <div className="flex items-center justify-between">
+                  <p className="font-extrabold text-sm text-foreground">{lang === 'ar' ? 'تحويل إلى صوت (MP3)' : 'Convert to Audio (MP3)'}</p>
+                  <Music size={18} className="text-primary" />
+                </div>
+                <button
+                  onClick={() => convert('mp3')}
+                  disabled={processing || limitReached || !ffmpegLoaded}
+                  className="w-full py-3 rounded-xl bg-gradient-to-r from-purple-500 to-violet-500 text-white font-extrabold text-sm shadow disabled:opacity-50 active:scale-95 transition-all"
+                >
+                  {processing ? (lang === 'ar' ? '⚙️ جاري التحويل...' : '⚙️ Converting...') : (lang === 'ar' ? 'استخراج MP3' : 'Extract MP3')}
+                </button>
+              </div>
+
+              <div className="bg-card border border-border rounded-2xl p-4 space-y-3">
+                <div className="flex items-center justify-between">
+                  <p className="font-extrabold text-sm text-foreground">{lang === 'ar' ? 'تحويل إلى فيديو (MP4)' : 'Convert to Video (MP4)'}</p>
+                  <Video size={18} className="text-primary" />
+                </div>
+                <button
+                  onClick={() => convert('mp4')}
+                  disabled={processing || limitReached || !ffmpegLoaded}
+                  className="w-full py-3 rounded-xl bg-gradient-to-r from-rose-500 to-pink-500 text-white font-extrabold text-sm shadow disabled:opacity-50 active:scale-95 transition-all"
+                >
+                  {processing ? (lang === 'ar' ? '⚙️ جاري التحويل...' : '⚙️ Converting...') : (lang === 'ar' ? 'تحويل إلى MP4' : 'Convert to MP4')}
+                </button>
+              </div>
+            </div>
+          )}
+
           {/* Result */}
           {done && resultBlob && (
             <div className="bg-emerald-50 dark:bg-emerald-950/30 border border-emerald-200 dark:border-emerald-900/40 rounded-2xl p-4 text-center space-y-3">
@@ -264,8 +392,8 @@ const FormatConverter = () => {
             </div>
           )}
 
-          {!done && (
-            <button onClick={convert} disabled={processing || limitReached}
+          {!done && category !== 'media' && (
+            <button onClick={() => convert()} disabled={processing || limitReached}
               className="w-full py-4 rounded-2xl bg-gradient-to-r from-purple-500 to-violet-500 text-white font-extrabold text-base shadow-lg disabled:opacity-50 active:scale-95 transition-all">
               {processing
                 ? (lang === 'ar' ? '⚙️ جاري التحويل...' : '⚙️ Converting...')
