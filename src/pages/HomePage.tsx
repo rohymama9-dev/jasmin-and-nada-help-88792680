@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { LogOut, Moon, Sun } from 'lucide-react';
 import { useLang } from '@/contexts/LanguageContext';
 import { useTheme } from '@/contexts/ThemeContext';
@@ -20,10 +20,22 @@ interface HomePageProps {
   addPoints: (n: number) => void;
 }
 
+const isIOSDevice = () => {
+  try {
+    return /iPad|iPhone|iPod/.test(navigator.userAgent) && !(window as any).MSStream
+      && !('standalone' in navigator && (navigator as any).standalone);
+  } catch { return false; }
+};
+
 const HomePage = ({ points, addPoints }: HomePageProps) => {
   const { t, lang, toggleLang } = useLang();
   const { theme, toggleTheme } = useTheme();
   const [name, setName] = useState<string>(() => getGuestName());
+  const [showIOSHint, setShowIOSHint] = useState(() => {
+    try {
+      return isIOSDevice() && !localStorage.getItem('pwa-ios-hint-dismissed');
+    } catch { return false; }
+  });
 
   useEffect(() => {
     let active = true;
@@ -91,6 +103,36 @@ const HomePage = ({ points, addPoints }: HomePageProps) => {
 
       {/* ── Services Banner ── */}
       <ServicesBanner />
+
+      {/* ── iOS Install Mini-Banner (Apple users only) ── */}
+      {showIOSHint && (
+        <div
+          dir={lang === 'ar' ? 'rtl' : 'ltr'}
+          className="relative rounded-2xl overflow-hidden flex items-center gap-3 px-4 py-3 shadow-md"
+          style={{ background: 'linear-gradient(135deg, #ff6eb4, #e91e8c)' }}
+        >
+          <span className="text-2xl shrink-0">🌸</span>
+          <div className="flex-1 min-w-0">
+            <p className="text-white font-extrabold text-sm leading-tight">
+              {lang === 'ar' ? 'لتحميل التطبيق على الآيفون 📲' : 'Install app on your iPhone 📲'}
+            </p>
+            <p className="text-white/80 text-[11px] mt-0.5">
+              {lang === 'ar'
+                ? 'اضغط زر المشاركة ⎋ ثم «إضافة إلى الشاشة الرئيسية»'
+                : 'Tap Share ⎋ then "Add to Home Screen"'}
+            </p>
+          </div>
+          <button
+            onClick={() => {
+              setShowIOSHint(false);
+              try { localStorage.setItem('pwa-ios-hint-dismissed', '1'); } catch {}
+            }}
+            className="shrink-0 w-6 h-6 rounded-full bg-white/20 text-white flex items-center justify-center text-xs font-bold"
+          >
+            ✕
+          </button>
+        </div>
+      )}
 
       {/* ── Promo: Compressor & Converter in Services tab ── */}
       <div

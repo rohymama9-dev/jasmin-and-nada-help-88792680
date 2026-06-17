@@ -72,8 +72,8 @@ export const InstallBanner = () => {
         <div>
           <p className="font-extrabold text-pink-800 text-base leading-snug">
             {lang === 'ar'
-              ? 'لتحميل التطبيق على شاشتك 📲'
-              : 'Install the app on your screen 📲'}
+              ? 'لتحميل التطبيق على الآيفون 📲'
+              : 'Install the app on your iPhone 📲'}
           </p>
           <p className="text-pink-700 text-sm mt-1 font-medium leading-relaxed">
             {lang === 'ar'

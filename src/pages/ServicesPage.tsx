@@ -140,7 +140,7 @@ const ServicesPage = ({ points, addPoints }: ServicesPageProps) => {
         <div className="glass-card rounded-3xl p-5 bg-gradient-to-br from-pink-50 to-rose-50 dark:from-pink-950/30 dark:to-rose-950/30 border border-pink-200 dark:border-pink-900/40 text-center">
           <div className="text-3xl mb-2">🌸</div>
           <p className="font-extrabold text-pink-800 dark:text-pink-300 text-sm">
-            {lang === 'ar' ? 'لتحميل التطبيق على شاشتك 📲' : 'Install the app on your screen 📲'}
+            {lang === 'ar' ? 'لتحميل التطبيق على الآيفون 📲' : 'Install the app on your iPhone 📲'}
           </p>
           <p className="text-pink-700 dark:text-pink-400 text-xs mt-1 font-medium">
             {lang === 'ar'
