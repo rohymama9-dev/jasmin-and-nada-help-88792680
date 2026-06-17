@@ -20,7 +20,7 @@ const PLAYER_H = 30;
 const PLAT_W = 70;
 const PLAT_H = 14;
 const GRAVITY = 0.55;
-const JUMP_VY = -11.5;
+const JUMP_VY = -11.5;  // base jump; scaled by speedMult to keep constant height
 const MOVE_SPEED = 4.5;
 
 // Ice tuning: starts at the very bottom of the world, rises in WORLD coords
@@ -158,7 +158,9 @@ const JumperGame = ({ onScore }: Props) => {
       }
 
       if (jumpQueuedRef.current && onGroundRef.current) {
-        vy.current = JUMP_VY * (1 + score * 0.001);
+        // Scale jump force WITH speedMult so the rabbit always reaches the same
+        // real-world height regardless of difficulty level — no more glitch
+        vy.current = JUMP_VY * speedMult;
         onGroundRef.current = false;
       }
       jumpQueuedRef.current = false;
@@ -172,7 +174,9 @@ const JumperGame = ({ onScore }: Props) => {
       if (platsRef.current.length < 14) {
         let y = topY;
         while (platsRef.current.length < 16) {
-          y -= 50 + Math.random() * 35;
+          // Keep gap reachable: max gap = jump height ÷ 1.5, capped at 75px
+          const maxGap = Math.min(75, Math.floor(60 / speedMult) + 30);
+          y -= 30 + Math.random() * maxGap;
           platCounterRef.current += 1;
           platsRef.current.push({
             x: Math.random() * (W - PLAT_W),

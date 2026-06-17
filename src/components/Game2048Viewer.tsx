@@ -214,7 +214,12 @@ const Game2048Viewer = ({ onBack, onScore }: { onBack?: () => void; onScore?: (r
       {/* Main content */}
       <div className="flex-1 flex flex-col overflow-hidden">
         {/* Game iframe */}
-        <div className="flex-[1.55] w-full overflow-hidden bg-muted/20">
+        <div
+          className="flex-[1.55] w-full overflow-hidden bg-muted/20"
+          style={{ touchAction: 'none' }}
+          onTouchStart={(e) => e.preventDefault()}
+          onTouchMove={(e) => e.preventDefault()}
+        >
           <iframe
             ref={iframeRef}
             src={GAME_URL}

@@ -240,7 +240,7 @@ const BankElHaz = ({ onScore }: Props) => {
           <p className="text-sm mt-1 opacity-90">{T('لعبة مونوبولي مصرية كلاسيكية', 'Classic Egyptian Monopoly')}</p>
           <p className="text-xs mt-2 opacity-80">{T(`رصيد البداية: ${START_BALANCE} جنيه`, `Start: ${START_BALANCE} EGP`)}</p>
         </div>
-        <p className="text-sm font-bold">{T('اختاري عدد اللاعبين', 'Choose players')}</p>
+        <p className="text-sm font-bold text-foreground dark:text-white">{T('اختاري عدد اللاعبين', 'Choose players')}</p>
         <div className="grid grid-cols-4 gap-2 max-w-md mx-auto">
           {[1, 2, 3, 4].map(n => (
             <button key={n} onClick={() => { start(n); setShowTutorial(true); }}
@@ -261,7 +261,7 @@ const BankElHaz = ({ onScore }: Props) => {
       <div key={i} className={`relative rounded-md p-1 text-[8px] flex flex-col bg-card border w-full h-full overflow-hidden ${o !== null ? 'border-2' : 'border-border'} ${turn === here[0] ? '' : ''}`}
         style={o !== null ? { borderColor: ['#ef4444', '#3b82f6', '#10b981', '#f59e0b'][o] } : undefined}>
         {s.color && <div className={`h-1.5 ${s.color} rounded-sm mb-0.5`} />}
-        <p className="font-bold leading-tight truncate">{lang === 'ar' ? s.nameAr : s.name}</p>
+        <p className="font-bold leading-tight truncate text-foreground dark:text-white">{lang === 'ar' ? s.nameAr : s.name}</p>
         {s.type === 'prop' && <p className="text-[7px] opacity-70">${s.price}</p>}
         <div className="flex flex-wrap gap-0.5 mt-auto">
           {here.map(p => <Car key={p} size={10} className={CAR_COLORS[p]} fill="currentColor" />)}
@@ -274,7 +274,7 @@ const BankElHaz = ({ onScore }: Props) => {
     <div className="space-y-3 relative">
       {/* Perimeter board — 7×7 grid with center "Bank" hub like the photo */}
       <div
-        className="grid gap-1 p-2 rounded-2xl bg-gradient-to-br from-amber-100 via-yellow-50 to-orange-100 ring-2 ring-amber-400 shadow-xl mx-auto"
+        className="grid gap-1 p-2 rounded-2xl bg-gradient-to-br from-amber-100 via-yellow-50 to-orange-100 dark:from-amber-900/40 dark:via-yellow-900/30 dark:to-orange-900/40 ring-2 ring-amber-400 shadow-xl mx-auto"
         style={{ gridTemplateColumns: `repeat(${SIDE}, minmax(0, 1fr))`, gridTemplateRows: `repeat(${SIDE}, minmax(0, 1fr))`, aspectRatio: '1 / 1', maxWidth: '32rem' }}
       >
         {/* Center hub */}
@@ -302,7 +302,7 @@ const BankElHaz = ({ onScore }: Props) => {
           <div key={i} className={`rounded-xl p-2 text-center ${turn === i && winner === null ? 'ring-2 ring-primary bg-primary/10' : 'bg-secondary'}`}>
             <div className="flex items-center justify-center gap-1">
               <Car size={14} className={CAR_COLORS[i]} fill="currentColor" />
-              <p className="text-[10px] font-bold">{(lang === 'ar' ? PLAYER_NAMES_AR : PLAYER_NAMES_EN)[i]}</p>
+              <p className="text-[10px] font-bold text-foreground dark:text-white">{(lang === 'ar' ? PLAYER_NAMES_AR : PLAYER_NAMES_EN)[i]}</p>
             </div>
             <p className={`text-lg font-extrabold ${bal[i] <= 0 ? 'text-destructive line-through' : ''}`}>{bal[i]} {T('ج.م', 'EGP')}</p>
           </div>
@@ -311,8 +311,8 @@ const BankElHaz = ({ onScore }: Props) => {
 
       <div className="flex items-center justify-center gap-3">
         <div className="flex gap-1">
-          <div className="w-10 h-10 rounded-lg bg-white border-2 border-foreground flex items-center justify-center font-extrabold">{dice?.[0] ?? '?'}</div>
-          <div className="w-10 h-10 rounded-lg bg-white border-2 border-foreground flex items-center justify-center font-extrabold">{dice?.[1] ?? '?'}</div>
+          <div className="w-10 h-10 rounded-lg bg-white dark:bg-slate-700 border-2 border-foreground flex items-center justify-center font-extrabold text-foreground dark:text-white">{dice?.[0] ?? '?'}</div>
+          <div className="w-10 h-10 rounded-lg bg-white dark:bg-slate-700 border-2 border-foreground flex items-center justify-center font-extrabold text-foreground dark:text-white">{dice?.[1] ?? '?'}</div>
         </div>
         <button onClick={roll} disabled={winner !== null}
           className="px-5 py-3 rounded-xl gradient-primary text-primary-foreground font-bold disabled:opacity-50">
@@ -321,7 +321,7 @@ const BankElHaz = ({ onScore }: Props) => {
         <button onClick={() => setNumPlayers(null)} className="px-3 py-3 rounded-xl bg-secondary font-bold">↺</button>
       </div>
 
-      <p className="text-xs text-center min-h-[1em]">{log}</p>
+      <p className="text-xs text-center min-h-[1em] text-foreground dark:text-slate-200">{log}</p>
       {winner !== null && (
         <div className="rounded-xl p-3 bg-emerald-500 text-white text-center font-extrabold">
           🏆 {T(`فاز ${PLAYER_NAMES_AR[winner]}!`, `${PLAYER_NAMES_EN[winner]} wins!`)}

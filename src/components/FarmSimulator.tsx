@@ -40,12 +40,14 @@ const WORLD_ASSETS = {
     trees: [
       { id: 'apple', emoji: '🌳', productEmoji: '🍎', productMs: 120000, productPrice: 15, nameAr: 'شجرة تفاح', nameEn: 'Apple Tree' },
       { id: 'orange', emoji: '🌳', productEmoji: '🍊', productMs: 120000, productPrice: 15, nameAr: 'شجرة برتقال', nameEn: 'Orange Tree' },
-    ]
+    ],
+    eggCost: 50,
+    honeyYield: 5,
   },
   premium: {
     seeds: [
-      { id: 'magic_bean', emoji: '🫘', growMs: 45000, sellPrice: 8, seedCost: 3, nameAr: 'فاصوليا سحرية', nameEn: 'Magic Bean' },
-      { id: 'strawberry', emoji: '🍓', growMs: 60000, sellPrice: 12, seedCost: 5, nameAr: 'فراولة', nameEn: 'Strawberry' },
+      { id: 'magic_bean', emoji: '🫘', growMs: 45000, sellPrice: 5, seedCost: 3, nameAr: 'فاصوليا سحرية', nameEn: 'Magic Bean' },
+      { id: 'strawberry', emoji: '🍓', growMs: 60000, sellPrice: 5, seedCost: 3, nameAr: 'فراولة', nameEn: 'Strawberry' },
     ],
     flowers: [
       { id: 'lotus', emoji: '🪷', nameAr: 'لوتس', nameEn: 'Lotus' },
@@ -59,12 +61,14 @@ const WORLD_ASSETS = {
     trees: [
       { id: 'golden_apple', emoji: '🌳', productEmoji: '🌕', productMs: 180000, productPrice: 60, nameAr: 'شجرة ذهبية', nameEn: 'Golden Tree' },
       { id: 'crystal_tree', emoji: '🌳', productEmoji: '💎', productMs: 300000, productPrice: 120, nameAr: 'شجرة الكريستال', nameEn: 'Crystal Tree' },
-    ]
+    ],
+    eggCost: 100,
+    honeyYield: 7,
   },
   forest: {
     seeds: [
-      { id: 'mushroom', emoji: '🍄', growMs: 20000, sellPrice: 5, seedCost: 2, nameAr: 'فطر', nameEn: 'Mushroom' },
-      { id: 'berry',    emoji: '🫐', growMs: 40000, sellPrice: 7, seedCost: 3, nameAr: 'توت', nameEn: 'Berry' },
+      { id: 'mushroom', emoji: '🍄', growMs: 20000, sellPrice: 8, seedCost: 5, nameAr: 'فطر', nameEn: 'Mushroom' },
+      { id: 'berry',    emoji: '🫐', growMs: 40000, sellPrice: 8, seedCost: 5, nameAr: 'توت', nameEn: 'Berry' },
     ],
     flowers: [
       { id: 'bluebell', emoji: '🪻', nameAr: 'جرس أزرق', nameEn: 'Bluebell' },
@@ -76,7 +80,9 @@ const WORLD_ASSETS = {
     trees: [
       { id: 'pine',   emoji: '🌲', productEmoji: '🌲', productMs: 120000, productPrice: 10, nameAr: 'صنوبر', nameEn: 'Pine' },
       { id: 'cherry', emoji: '🌳', productEmoji: '🍒', productMs: 180000, productPrice: 20, nameAr: 'كرز', nameEn: 'Cherry' },
-    ]
+    ],
+    eggCost: 200,
+    honeyYield: 10,
   }
 };
 
@@ -88,9 +94,14 @@ const getAnimals = (w: World) => WORLD_ASSETS[w].animals;
 const getTrees = (w: World) => WORLD_ASSETS[w].trees;
 
 const FLOWER_COST = 5;
-const FLOWER_BLOOM_MS = 20; // 2 minutes
-const HONEY_PRODUCE_MS = 20; // 2 minutes
-const HONEY_PRICE = 5;
+const FLOWER_BLOOM_MS = 120000; // 2 minutes
+const HONEY_PRODUCE_MS = 120000; // 2 minutes
+const TRAVEL_COST = 200; // coins needed to unlock a new world
+// Honey yield per collection depends on world
+const getHoneyYield = (w: World) => (WORLD_ASSETS[w] as any).honeyYield ?? 5;
+const getEggCost   = (w: World) => (WORLD_ASSETS[w] as any).eggCost   ?? 60;
+// Shared-wallet storage key (coins are global across all worlds)
+const SHARED_COINS_KEY = 'farm-sim-shared-coins-v1';
 
 interface Animal {
   id: string; emoji: string; productEmoji: string; productMs: number;
@@ -102,7 +113,7 @@ interface Tree {
   productPrice: number; nameAr: string; nameEn: string;
 }
 
-const EGG_COST = 60;
+const EGG_COST = 60; // kept for type-compat; runtime uses getEggCost(world)
 
 // ───────── Map ─────────
 //
@@ -233,23 +244,47 @@ const FarmSimulator = ({ onScore, gender = 'female' }: Props) => {
     return loaded;
   });
 
-  // Travel cycles between Home → Premium → Forest → Home. Each world keeps its
-  // own save (coins, plots, animals, AND player position/facing), so the
-  // character literally walks into the next world and can interact with it.
+  // Travel cycles between Home → Premium → Forest → Home.
+  // Costs 200 coins for first visit to a new world. Coins are SHARED across all worlds.
   const travel = useCallback(() => {
     const idx = WORLD_ORDER.indexOf(world);
     const next: World = WORLD_ORDER[(idx + 1) % WORLD_ORDER.length];
-    lsSetJSON(STORAGE_KEY_FOR(world), state);
+
+    // Check if destination world has been visited before
+    const nextSaved = lsGetJSON<SaveState | null>(STORAGE_KEY_FOR(next), null);
+    const isNewWorld = !nextSaved || (nextSaved as Partial<SaveState>).v !== 2;
+
+    // Enforce travel cost for new worlds
+    if (isNewWorld && state.coins < TRAVEL_COST) {
+      flash(lang === 'ar' ? `تحتاجين 🪙 ${TRAVEL_COST} لفتح هذا العالم` : `Need 🪙 ${TRAVEL_COST} to unlock this world`);
+      return;
+    }
+
+    // Persist current world state (with latest coins)
+    const currentCoins = state.coins - (isNewWorld ? TRAVEL_COST : 0);
+    lsSetJSON(STORAGE_KEY_FOR(world), { ...state, coins: currentCoins });
     lsSetJSON(WORLD_KEY, next);
-    const loaded =
-      lsGetJSON<SaveState | null>(STORAGE_KEY_FOR(next), null) ||
-      (next === 'premium' ? { ...defaultState(), coins: 200, selectedSeed: WORLD_ASSETS.premium.seeds[0].id, selectedFlower: WORLD_ASSETS.premium.flowers[0].id }
-       : next === 'forest' ? { ...defaultState(), coins: 120, selectedSeed: WORLD_ASSETS.forest.seeds[0].id, selectedFlower: WORLD_ASSETS.forest.flowers[0].id }
-       : defaultState());
-    if (!loaded.treeStates) loaded.treeStates = {};
+    // Save shared coins
+    lsSetJSON(SHARED_COINS_KEY, currentCoins);
+
+    let loaded: SaveState;
+    if (!isNewWorld) {
+      loaded = nextSaved as SaveState;
+      if (!loaded.treeStates) loaded.treeStates = {};
+      // Always sync shared coins
+      loaded = { ...loaded, coins: currentCoins };
+    } else {
+      // First visit: create fresh state, inherit coins after travel cost
+      const baseState = next === 'premium'
+        ? { ...defaultState(), selectedSeed: WORLD_ASSETS.premium.seeds[0].id, selectedFlower: WORLD_ASSETS.premium.flowers[0].id }
+        : next === 'forest'
+          ? { ...defaultState(), selectedSeed: WORLD_ASSETS.forest.seeds[0].id, selectedFlower: WORLD_ASSETS.forest.flowers[0].id }
+          : defaultState();
+      loaded = { ...baseState, coins: currentCoins };
+    }
     setWorld(next);
     setState(loaded);
-  }, [world, state]);
+  }, [world, state, lang, flash]);
 
   const [shopOpen, setShopOpen] = useState<null | 'main' | 'seeds' | 'flowers' | 'eggs'>(null);
   const [toastMsg, setToastMsg] = useState<string>('');
@@ -447,21 +482,20 @@ const FarmSimulator = ({ onScore, gender = 'female' }: Props) => {
     if (code === 'H') {
       if (state.honey <= 0) { flash(lang === 'ar' ? '🍯 لا يوجد عسل بعد — ازرعي زهور!' : '🍯 No honey yet — plant flowers!'); return; }
       const got = state.honey;
-      // Per spec: each honey collected adds strictly +HONEY_PRICE coins, and the source
-      // flower tiles revert to empty soil so a new seed/flower can be planted.
+      const priceEach = getHoneyYield(world); // 5/7/10 per world
+      const earned = got * priceEach;
       setState(s => {
         const clearedFlowers: Record<string, FlowerState> = {};
         Object.entries(s.flowerStates).forEach(([k, fs]) => {
-          // Only fully bloomed flowers contributed to honey — reset those.
           if (!(fs.plantedAt && Date.now() - fs.plantedAt >= FLOWER_BLOOM_MS)) {
             clearedFlowers[k] = fs;
           } else {
             clearedFlowers[k] = { kind: '', plantedAt: null };
           }
         });
-        return { ...s, honey: 0, coins: s.coins + got * HONEY_PRICE, flowerStates: clearedFlowers, hiveLastAt: Date.now() };
+        return { ...s, honey: 0, coins: s.coins + earned, flowerStates: clearedFlowers, hiveLastAt: Date.now() };
       });
-      flash(`🍯 +${got} → 🪙 ${got * HONEY_PRICE}`);
+      flash(`🍯 +${got} → 🪙 ${earned} (${priceEach} لكل عسل)`);
       onScore?.(Math.min(4, got));
       return;
     }
@@ -567,8 +601,9 @@ const FarmSimulator = ({ onScore, gender = 'female' }: Props) => {
   };
 
   const buyEgg = () => {
-    if (state.coins < EGG_COST) { flash(lang === 'ar' ? 'لا توجد عملات' : 'Not enough coins'); return; }
-    setState(s => ({ ...s, coins: s.coins - EGG_COST, eggs: s.eggs + 1 }));
+    const cost = getEggCost(world);
+    if (state.coins < cost) { flash(lang === 'ar' ? 'لا توجد عملات' : 'Not enough coins'); return; }
+    setState(s => ({ ...s, coins: s.coins - cost, eggs: s.eggs + 1 }));
     flash(`🥚 +1`);
   };
 

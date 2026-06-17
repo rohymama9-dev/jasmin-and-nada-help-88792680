@@ -95,7 +95,7 @@ const Dominoes = ({ onScore }: Props) => {
   };
 
   const Pip = ({ t }: { t: Tile }) => (
-    <span className="inline-flex items-center bg-white border-2 border-foreground rounded-lg px-3 py-2 text-base font-extrabold mx-0.5 shadow-sm">
+    <span className="inline-flex items-center bg-white dark:bg-slate-700 border-2 border-foreground rounded-lg px-3 py-2 text-base font-extrabold mx-0.5 shadow-sm text-slate-900 dark:text-white">
       {t[0]}<span className="mx-1 opacity-60">|</span>{t[1]}
     </span>
   );
@@ -103,15 +103,15 @@ const Dominoes = ({ onScore }: Props) => {
   return (
     <div className="space-y-3">
       <div className="text-center">
-        <h2 className="text-lg font-extrabold">🁢 {lang === 'ar' ? 'الدومينو' : 'Dominoes'}</h2>
+        <h2 className="text-lg font-extrabold text-foreground dark:text-white">🁢 {lang === 'ar' ? 'الدومينو' : 'Dominoes'}</h2>
         <p className="text-xs text-muted-foreground">{lang === 'ar' ? `الذكاء الاصطناعي: ${aiHand.length} قطع · المخزون: ${boneyard.length}` : `AI: ${aiHand.length} tiles · Boneyard: ${boneyard.length}`}</p>
       </div>
-      <div className="rounded-2xl p-3 bg-emerald-100 min-h-[100px] flex flex-wrap items-center justify-center gap-1 overflow-x-auto" dir="ltr">
+      <div className="rounded-2xl p-3 bg-emerald-100 dark:bg-emerald-900/40 min-h-[100px] flex flex-wrap items-center justify-center gap-1 overflow-x-auto" dir="ltr">
         {board.length === 0 ? (
-          <span className="text-xs text-muted-foreground">{lang === 'ar' ? 'الطاولة فارغة' : 'Board is empty'}</span>
+          <span className="text-xs text-muted-foreground dark:text-slate-300">{lang === 'ar' ? 'الطاولة فارغة' : 'Board is empty'}</span>
         ) : board.map((t, i) => <Pip key={i} t={t} />)}
       </div>
-      <p className="text-center text-xs h-4 font-bold">{msg}</p>
+      <p className="text-center text-xs h-4 font-bold text-foreground dark:text-white">{msg}</p>
       {/* Force LTR for hand row so ← truly = left end and → truly = right end. */}
       <div dir="ltr" className="flex flex-wrap gap-2 justify-center">
         {hand.map((t, i) => (

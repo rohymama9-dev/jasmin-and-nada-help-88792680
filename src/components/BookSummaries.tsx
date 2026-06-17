@@ -867,7 +867,7 @@ const BookSummaries = () => {
     const takeaway = lang === 'ar' ? selectedBook.takeawayAr : selectedBook.takeawayEn;
 
     return (
-      <div className="fixed inset-0 z-50 bg-[#f4f1ea] overflow-y-auto">
+      <div className="fixed inset-0 z-50 bg-[#f4f1ea] dark:bg-slate-900 overflow-y-auto">
         <div className="max-w-4xl mx-auto px-5 py-6 space-y-6">
           {/* Top Bar */}
           <div className="flex items-center justify-between">
@@ -916,27 +916,27 @@ const BookSummaries = () => {
           {/* Dynamic Pages Display */}
           <div className="space-y-12 pb-20">
             {pages.map((page, idx) => (
-              <div key={idx} className="grid grid-cols-1 md:grid-cols-2 gap-0 shadow-2xl rounded-3xl overflow-hidden border border-border bg-white min-h-[400px] relative">
+              <div key={idx} className="grid grid-cols-1 md:grid-cols-2 gap-0 shadow-2xl rounded-3xl overflow-hidden border border-border bg-white dark:bg-slate-800 min-h-[400px] relative">
                 {/* Center Spine */}
                 <div className="hidden md:block absolute left-1/2 top-0 bottom-0 w-[2px] bg-gradient-to-r from-gray-200 via-gray-300 to-gray-200 z-10 shadow-inner" />
                 
                 {/* Left Page: Title & Explanation */}
-                <div className={`p-10 md:p-14 ${lang === 'ar' ? 'order-1' : 'order-2'} relative bg-white`}>
+                <div className={`p-10 md:p-14 ${lang === 'ar' ? 'order-1' : 'order-2'} relative bg-white dark:bg-slate-800`}>
                   <div className="absolute top-6 left-6 text-[10px] font-bold text-muted-foreground/30 uppercase tracking-[0.2em]">
                     {lang === 'ar' ? `صفحة ${idx * 2 + 1}` : `PAGE ${idx * 2 + 2}`}
                   </div>
                   <div className="space-y-6" dir={lang === 'ar' ? 'rtl' : 'ltr'}>
-                    <h3 className="text-2xl font-black text-foreground border-b-4 border-primary/20 pb-2 inline-block">
+                    <h3 className="text-2xl font-black text-foreground dark:text-white border-b-4 border-primary/20 pb-2 inline-block">
                       {page.title}
                     </h3>
-                    <div className="text-lg text-muted-foreground leading-relaxed text-justify indent-8 font-serif">
+                    <div className="text-lg text-muted-foreground dark:text-slate-300 leading-relaxed text-justify indent-8 font-serif">
                       {page.content}
                     </div>
                   </div>
                 </div>
 
                 {/* Right Page: Key Point */}
-                <div className={`p-10 md:p-14 ${lang === 'ar' ? 'order-2' : 'order-1'} relative bg-[#fafafa] border-l border-border/50 flex flex-col justify-center`}>
+                <div className={`p-10 md:p-14 ${lang === 'ar' ? 'order-2' : 'order-1'} relative bg-[#fafafa] dark:bg-slate-700 border-l border-border/50 flex flex-col justify-center`}>
                   <div className="absolute top-6 right-6 text-[10px] font-bold text-muted-foreground/30 uppercase tracking-[0.2em]">
                     {lang === 'ar' ? `صفحة ${idx * 2 + 2}` : `PAGE ${idx * 2 + 1}`}
                   </div>
@@ -945,7 +945,7 @@ const BookSummaries = () => {
                       <Lightbulb size={32} />
                     </div>
                     <p className="text-xs font-black text-primary uppercase tracking-widest">{lang === 'ar' ? 'نقطة جوهرية' : 'Key Point'}</p>
-                    <h4 className="text-2xl font-black text-foreground leading-tight">
+                    <h4 className="text-2xl font-black text-foreground dark:text-white leading-tight">
                       {page.keyPoint}
                     </h4>
                   </div>
