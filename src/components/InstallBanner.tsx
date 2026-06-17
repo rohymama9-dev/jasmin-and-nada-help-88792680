@@ -1,26 +1,41 @@
 import { useState, useEffect } from 'react';
-import { useLang } from '@/contexts/LanguageContext';
 
-const isIOS = () => {
-  const ua = navigator.userAgent;
-  return /iPad|iPhone|iPod/.test(ua) && !(window as any).MSStream;
+// Detect language without requiring LanguageProvider context
+// since this component lives outside the LanguageProvider in __root.tsx
+const detectLang = (): 'ar' | 'en' => {
+  try {
+    const stored = localStorage.getItem('app-lang');
+    if (stored === 'ar' || stored === 'en') return stored;
+    return navigator.language.startsWith('ar') ? 'ar' : 'en';
+  } catch {
+    return 'ar';
+  }
 };
 
-const isInStandaloneMode = () =>
-  'standalone' in navigator && (navigator as any).standalone;
+const isIOS = () => {
+  try {
+    const ua = navigator.userAgent;
+    return /iPad|iPhone|iPod/.test(ua) && !(window as any).MSStream;
+  } catch { return false; }
+};
+
+const isInStandaloneMode = () => {
+  try {
+    return 'standalone' in navigator && (navigator as any).standalone;
+  } catch { return false; }
+};
 
 export const InstallBanner = () => {
-  const { lang } = useLang();
   const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
   const [showBanner, setShowBanner] = useState(false);
   const [showIOSModal, setShowIOSModal] = useState(false);
+  const [lang, setLang] = useState<'ar' | 'en'>('ar');
 
   useEffect(() => {
-    // Don't show if already installed as PWA
+    setLang(detectLang());
     if (isInStandaloneMode()) return;
 
     if (isIOS()) {
-      // Show banner for iOS users (who can't use beforeinstallprompt)
       const dismissed = localStorage.getItem('pwa-ios-dismissed');
       if (!dismissed) setShowBanner(true);
     } else {
@@ -92,7 +107,6 @@ export const InstallBanner = () => {
             onClick={(e) => e.stopPropagation()}
             dir={lang === 'ar' ? 'rtl' : 'ltr'}
           >
-            {/* Header */}
             <div className="text-center space-y-2">
               <div className="text-4xl">📱</div>
               <h3 className="text-lg font-extrabold text-slate-800 dark:text-white">
@@ -100,7 +114,6 @@ export const InstallBanner = () => {
               </h3>
             </div>
 
-            {/* Steps */}
             <div className="space-y-3">
               <div className="flex items-start gap-3 bg-pink-50 dark:bg-slate-800 rounded-2xl p-3">
                 <span className="text-2xl shrink-0">1️⃣</span>
