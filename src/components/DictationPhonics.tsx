@@ -357,7 +357,7 @@ const DictationPhonics = ({ onScore }: { onScore?: (n: number) => void }) => {
               >
                 <Trash2 size={20} />
               </button>
-              <div className={`flex-1 bg-white rounded-xl border border-border p-3 flex items-center justify-center text-lg md:text-xl font-bold shadow-inner min-h-[56px] ${mode === 'ar' ? 'font-arabic' : 'font-sans'}`} dir={mode === 'ar' ? 'rtl' : 'ltr'}>
+              <div className={`flex-1 bg-white dark:bg-slate-700 dark:text-white rounded-xl border border-border p-3 flex items-center justify-center text-lg md:text-xl font-bold shadow-inner min-h-[56px] ${mode === 'ar' ? 'font-arabic' : 'font-sans'}`} dir={mode === 'ar' ? 'rtl' : 'ltr'}>
                 {sentenceInput}
               </div>
             </div>
@@ -397,7 +397,7 @@ const DictationPhonics = ({ onScore }: { onScore?: (n: number) => void }) => {
               <button
                 key={char}
                 onClick={() => handleCharClick(char)}
-                className={`aspect-square flex items-center justify-center bg-white border border-border rounded-xl text-base md:text-lg font-bold text-foreground hover:border-primary hover:text-primary active:scale-90 transition-all shadow-sm ${mode === 'ar' ? 'font-arabic' : 'font-sans'}`}
+                className={`aspect-square flex items-center justify-center bg-white dark:bg-slate-700 border border-border rounded-xl text-base md:text-lg font-bold text-foreground dark:text-white hover:border-primary hover:text-primary active:scale-90 transition-all shadow-sm ${mode === 'ar' ? 'font-arabic' : 'font-sans'}`}
               >
                 {char}
               </button>
@@ -407,7 +407,7 @@ const DictationPhonics = ({ onScore }: { onScore?: (n: number) => void }) => {
           {/* Contextual Shapes Popup */}
           {showShapes && mode === 'ar' && (
             <div className="absolute inset-0 z-20 flex items-center justify-center p-4">
-              <div className="bg-white rounded-2xl shadow-2xl border border-primary/20 p-4 flex flex-wrap justify-center gap-3 animate-in zoom-in-95 duration-200">
+              <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-2xl border border-primary/20 p-4 flex flex-wrap justify-center gap-3 animate-in zoom-in-95 duration-200">
                 {ARABIC_ALPHABET.find(a => a.char === showShapes)?.shapes.map((shape, idx) => (
                   <button
                     key={idx}

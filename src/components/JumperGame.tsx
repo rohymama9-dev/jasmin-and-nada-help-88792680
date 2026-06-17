@@ -19,9 +19,9 @@ const PLAYER_W = 26;
 const PLAYER_H = 30;
 const PLAT_W = 70;
 const PLAT_H = 14;
-const GRAVITY = 0.55;
-const JUMP_VY = -11.5;  // base jump; scaled by speedMult to keep constant height
-const MOVE_SPEED = 4.5;
+const GRAVITY = 0.55;       // FIXED — not scaled with level
+const JUMP_VY = -11.5;      // FIXED — constant jump height ~120px always reachable
+const MOVE_SPEED = 4.5;     // base; scaled by speedMult for horizontal challenge
 
 // Ice tuning: starts at the very bottom of the world, rises in WORLD coords
 // (up = negative y). Rising rate scales with how high the player has climbed.
@@ -112,8 +112,10 @@ const JumperGame = ({ onScore }: Props) => {
       lastTime = time;
 
       const lvl = 1 + Math.floor(score / 25);
-      const speedMult = 1 + Math.min(4, (lvl - 1) * 0.35);
-      const grav = GRAVITY * speedMult * dt;
+      // Only horizontal speed scales with level — vertical physics is CONSTANT
+      // so the rabbit always reaches the same height regardless of difficulty
+      const speedMult = 1 + Math.min(3, (lvl - 1) * 0.25);
+      const grav = GRAVITY * dt;  // constant gravity — no speedMult scaling
 
       if (keysRef.current.l) vx.current = -MOVE_SPEED * speedMult;
       else if (keysRef.current.r) vx.current = MOVE_SPEED * speedMult;
@@ -158,9 +160,8 @@ const JumperGame = ({ onScore }: Props) => {
       }
 
       if (jumpQueuedRef.current && onGroundRef.current) {
-        // Scale jump force WITH speedMult so the rabbit always reaches the same
-        // real-world height regardless of difficulty level — no more glitch
-        vy.current = JUMP_VY * speedMult;
+        // CONSTANT jump velocity — no speedMult — always reaches ~120px height
+        vy.current = JUMP_VY;
         onGroundRef.current = false;
       }
       jumpQueuedRef.current = false;
@@ -174,9 +175,10 @@ const JumperGame = ({ onScore }: Props) => {
       if (platsRef.current.length < 14) {
         let y = topY;
         while (platsRef.current.length < 16) {
-          // Keep gap reachable: max gap = jump height ÷ 1.5, capped at 75px
-          const maxGap = Math.min(75, Math.floor(60 / speedMult) + 30);
-          y -= 30 + Math.random() * maxGap;
+          // Max gap is always safely reachable with JUMP_VY=-11.5 (height≈120px)
+          // Keep max gap at 65px so there's always 55px of headroom
+          const maxGap = Math.max(20, Math.min(65, 70 - lvl * 2));
+          y -= 25 + Math.random() * maxGap;
           platCounterRef.current += 1;
           platsRef.current.push({
             x: Math.random() * (W - PLAT_W),

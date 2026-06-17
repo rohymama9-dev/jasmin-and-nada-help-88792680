@@ -308,14 +308,18 @@ const FarmSimulator = ({ onScore, gender = 'female' }: Props) => {
     return () => clearInterval(id);
   }, []);
 
-  // Honey production: any blooming flower in the field passively makes honey at the hive.
+  // Honey production: hive produces 1 unit every HONEY_PRODUCE_MS (2 min),
+  // flowers just need to be present & bloomed to enable production.
+  // 1 unit = getHoneyYield(world) coins (5 / 7 / 10).
   useEffect(() => {
     const blooms = Object.values(state.flowerStates).filter(f => f.plantedAt && Date.now() - f.plantedAt >= FLOWER_BLOOM_MS).length;
     if (blooms <= 0) return;
     const elapsed = Date.now() - state.hiveLastAt;
-    const produced = Math.floor(elapsed / HONEY_PRODUCE_MS) * blooms;
+    const cycles = Math.floor(elapsed / HONEY_PRODUCE_MS);
+    // 1 honey per cycle regardless of flower count
+    const produced = cycles;
     if (produced > 0) {
-      setState(s => ({ ...s, honey: s.honey + produced, hiveLastAt: s.hiveLastAt + Math.floor(elapsed / HONEY_PRODUCE_MS) * HONEY_PRODUCE_MS }));
+      setState(s => ({ ...s, honey: s.honey + produced, hiveLastAt: s.hiveLastAt + cycles * HONEY_PRODUCE_MS }));
     }
   }, [state.flowerStates, state.hiveLastAt]);
 
