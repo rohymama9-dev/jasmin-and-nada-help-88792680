@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { Calendar as CalendarIcon, Check, X, Smile, Frown, Battery, Zap } from 'lucide-react';
 import { useLang } from '@/contexts/LanguageContext';
 import { usePoints } from '@/hooks/usePoints';

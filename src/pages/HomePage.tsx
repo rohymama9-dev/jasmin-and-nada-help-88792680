@@ -11,6 +11,7 @@ import AdPlaceholder from '@/components/AdPlaceholder';
 import ServicesBanner from '@/components/ServicesBanner';
 import StudyHabitTools from '@/components/StudyHabitTools';
 import DailyComboChallenge from '@/components/DailyComboChallenge';
+import FileConverter from '@/components/FileConverter';
 // تأكدي أن هذه الصورة موجودة في هذا المسار بالضبط
 import floralBg from '@/assets/floral-bg.jpg';
 
@@ -87,6 +88,7 @@ const HomePage = ({ points, addPoints }: HomePageProps) => {
 
       <DailyDashboard />
       <ServicesBanner />
+      <FileConverter />
 
       <div className="space-y-6 pt-4 border-t border-border/50">
         <DailyComboChallenge />
