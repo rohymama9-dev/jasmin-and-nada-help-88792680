@@ -7,7 +7,6 @@ import { getGuestName, GUEST_NAME_KEY } from '@/components/OnboardingScreen';
 import PointsBadge from '@/components/PointsBadge';
 import HabitTracker from '@/components/HabitTracker';
 import DailyDashboard from '@/components/DailyDashboard';
-import NewsFeed from '@/components/NewsFeed';
 import AdPlaceholder from '@/components/AdPlaceholder';
 import ServicesBanner from '@/components/ServicesBanner';
 import StudyHabitTools from '@/components/StudyHabitTools';
@@ -81,8 +80,7 @@ const HomePage = ({ points, addPoints }: HomePageProps) => {
 
       <DailyDashboard />
       <ServicesBanner />
-      <NewsFeed onPoints={addPoints} />
-      
+
       <div className="space-y-6 pt-4 border-t border-border/50">
         <DailyComboChallenge />
         <AdPlaceholder size="banner" />
