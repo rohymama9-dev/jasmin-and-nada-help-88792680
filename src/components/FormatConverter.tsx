@@ -56,8 +56,8 @@ const FormatConverter = () => {
       
       try {
         await ffmpeg.load({
-          coreURL: await toBlobURL('https://unpkg.com/@ffmpeg/core@0.12.6/dist/ffmpeg-core.js', 'text/javascript'),
-          wasmURL: await toBlobURL('https://unpkg.com/@ffmpeg/core@0.12.6/dist/ffmpeg-core.wasm', 'application/wasm'),
+          coreURL: await toBlobURL('https://unpkg.com/@ffmpeg/core@0.12.6/dist/umd/ffmpeg-core.js', 'text/javascript'),
+          wasmURL: await toBlobURL('https://unpkg.com/@ffmpeg/core@0.12.6/dist/umd/ffmpeg-core.wasm', 'application/wasm'),
         });
         setFfmpegLoaded(true);
       } catch (error) {

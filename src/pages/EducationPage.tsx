@@ -67,6 +67,51 @@ const EducationPage = ({ points, educationPoints, addPoints }: Props) => {
 
   const normalizeWhitespace = (s: string) => s.replace(/\s+/g, ' ').trim();
 
+  const normalizeArabicText = (text: string): string => {
+    if (!text) return '';
+
+    // Step 1: Remove all zero-width and invisible characters
+    let cleaned = text.replace(/[\u200B-\u200D\uFEFF\u200E\u200F\u202A-\u202E]/g, '');
+    
+    // Step 2: Detect if text contains Arabic characters
+    const arabicRegex = /[\u0600-\u06FF\u0750-\u077F\u08A0-\u08FF]/;
+    if (!arabicRegex.test(cleaned)) return normalizeWhitespace(cleaned);
+
+    // Step 3: Fix character spacing issues (remove spaces between Arabic characters)
+    // Match sequences of Arabic characters separated by single spaces and join them
+    cleaned = cleaned.replace(/([\u0600-\u06FF\u0750-\u077F\u08A0-\u08FF])\s+([\u0600-\u06FF\u0750-\u077F\u08A0-\u08FF])/g, '$1$2');
+
+    // Step 4: Reverse only the Arabic segments (handle RTL correctly)
+    // Split into segments of Arabic and non-Arabic text
+    const segments = [];
+    let currentSegment = '';
+    let currentIsArabic = false;
+    
+    for (const char of cleaned) {
+      const isArabic = arabicRegex.test(char);
+      if (isArabic !== currentIsArabic) {
+        if (currentSegment) segments.push({ text: currentSegment, isArabic: currentIsArabic });
+        currentSegment = char;
+        currentIsArabic = isArabic;
+      } else {
+        currentSegment += char;
+      }
+    }
+    if (currentSegment) segments.push({ text: currentSegment, isArabic: currentIsArabic });
+
+    // Reverse each Arabic segment
+    const processedSegments = segments.map(seg => {
+      if (seg.isArabic) {
+        // Reverse the entire segment (fixes word order too)
+        return seg.text.split('').reverse().join('');
+      }
+      return seg.text;
+    });
+
+    // Join all segments back and normalize whitespace
+    return normalizeWhitespace(processedSegments.join(''));
+  };
+
   const parseDocument = async (f: File) => {
     setDocLoading(true);
     setDocError(null);
@@ -117,7 +162,7 @@ const EducationPage = ({ points, educationPoints, addPoints }: Props) => {
           lastY = item.transform[5];
         }
         
-        const text = normalizeWhitespace(pageText);
+        const text = normalizeArabicText(pageText);
         pages.push({ page: pageNum, text });
       }
       setDocPages(pages);

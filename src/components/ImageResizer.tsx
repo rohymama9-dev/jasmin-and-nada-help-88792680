@@ -1,6 +1,6 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { useLang } from '@/contexts/LanguageContext';
-import { Download, PlayCircle, Crop } from 'lucide-react';
+import { Download, X, PlayCircle, Crop, ZoomIn, ZoomOut } from 'lucide-react';
 import { toast } from 'sonner';
 
 const getUsesKey = () => {
@@ -13,15 +13,6 @@ const getMaxUsesKey = () => {
 };
 const DEFAULT_MAX_USES = 3;
 
-const PRESETS = [
-  { label: 'Instagram', w: 1080, h: 1080, icon: '📸' },
-  { label: 'Story', w: 1080, h: 1920, icon: '📱' },
-  { label: 'Twitter/X', w: 1500, h: 500, icon: '🐦' },
-  { label: 'Facebook', w: 1200, h: 630, icon: '👍' },
-  { label: 'YouTube', w: 1280, h: 720, icon: '▶️' },
-  { label: 'A4', w: 2480, h: 3508, icon: '📄' },
-];
-
 interface Props {
   points?: number;
   addPoints?: (n: number) => void;
@@ -33,15 +24,17 @@ const ImageResizer = ({ points, addPoints }: Props = {}) => {
   const [maxUses, setMaxUses] = useState(DEFAULT_MAX_USES);
   const [file, setFile] = useState<File | null>(null);
   const [originalImg, setOriginalImg] = useState<HTMLImageElement | null>(null);
-  const [origPxW, setOrigPxW] = useState(0);
-  const [origPxH, setOrigPxH] = useState(0);
-  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
-  const [width, setWidth] = useState(1080);
-  const [height, setHeight] = useState(1080);
-  const [unit, setUnit] = useState<'px' | 'cm'>('px');
-  const [origRatio, setOrigRatio] = useState(1);
+  const [width, setWidth] = useState(800);
+  const [height, setHeight] = useState(800);
+  const [scale, setScale] = useState(1);
+  const [position, setPosition] = useState({ x: 0, y: 0 });
+  const [isDragging, setIsDragging] = useState(false);
+  const [dragStart, setDragStart] = useState({ x: 0, y: 0 });
   const [processing, setProcessing] = useState(false);
   const [watchingAd, setWatchingAd] = useState(false);
+
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+  const previewRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     setUses(Number(localStorage.getItem(getUsesKey()) || 0));
@@ -63,120 +56,84 @@ const ImageResizer = ({ points, addPoints }: Props = {}) => {
     localStorage.setItem(getUsesKey(), n.toString());
   };
 
-  const pxFromCm = (cm: number) => Math.round(cm * 118.11);
-  const cmFromPx = (px: number) => parseFloat((px / 118.11).toFixed(2));
-  const clamp = (v: number, min: number, max: number) => Math.max(min, Math.min(max, v));
-
   const handleFileChange = (f: File) => {
-    if (previewUrl) URL.revokeObjectURL(previewUrl);
     const url = URL.createObjectURL(f);
     setFile(f);
-    setPreviewUrl(url);
     const img = new Image();
     img.onload = () => {
       setOriginalImg(img);
-      setOrigPxW(img.width);
-      setOrigPxH(img.height);
-      const ratio = img.width / img.height;
-      setOrigRatio(ratio);
-      setWidth(img.width);
-      setHeight(img.height);
+      setWidth(Math.min(800, img.width));
+      setHeight(Math.min(800, img.height));
+      setScale(1);
+      setPosition({ x: 0, y: 0 });
     };
     img.src = url;
   };
 
-  const handleWidthChange = (val: number) => {
-    if (!origRatio || !origPxW || !origPxH) return;
-    const pxRaw = unit === 'cm' ? pxFromCm(val) : val;
-    const px = clamp(pxRaw, 1, origPxW);
-    const newHpx = clamp(Math.round(px / origRatio), 1, origPxH);
-    const newWVal = unit === 'cm' ? cmFromPx(px) : px;
-    const newHVal = unit === 'cm' ? cmFromPx(newHpx) : newHpx;
-    setWidth(newWVal);
-    setHeight(newHVal);
+  const handleMouseDown = (e: React.MouseEvent) => {
+    if (!originalImg) return;
+    setIsDragging(true);
+    setDragStart({
+      x: e.clientX - position.x,
+      y: e.clientY - position.y
+    });
   };
 
-  const handleHeightChange = (val: number) => {
-    if (!origRatio || !origPxW || !origPxH) return;
-    const pxRaw = unit === 'cm' ? pxFromCm(val) : val;
-    const px = clamp(pxRaw, 1, origPxH);
-    const newWpx = clamp(Math.round(px * origRatio), 1, origPxW);
-    const newWVal = unit === 'cm' ? cmFromPx(newWpx) : newWpx;
-    const newHVal = unit === 'cm' ? cmFromPx(px) : px;
-    setWidth(newWVal);
-    setHeight(newHVal);
+  const handleMouseMove = (e: React.MouseEvent) => {
+    if (!isDragging || !originalImg) return;
+    setPosition({
+      x: e.clientX - dragStart.x,
+      y: e.clientY - dragStart.y
+    });
   };
 
-  const applyPreset = (w: number, h: number) => {
-    if (!origPxW || !origPxH) return;
-    const scale = Math.min(1, w / origPxW, h / origPxH);
-    const tw = Math.max(1, Math.round(origPxW * scale));
-    const th = Math.max(1, Math.round(origPxH * scale));
-    setWidth(unit === 'cm' ? cmFromPx(tw) : tw);
-    setHeight(unit === 'cm' ? cmFromPx(th) : th);
+  const handleMouseUp = () => {
+    setIsDragging(false);
   };
 
-  const switchUnit = (u: 'px' | 'cm') => {
-    if (u === unit) return;
-    if (u === 'cm') {
-      setWidth(cmFromPx(width));
-      setHeight(cmFromPx(height));
-    } else {
-      setWidth(pxFromCm(width));
-      setHeight(pxFromCm(height));
-    }
-    setUnit(u);
+  const handleMouseLeave = () => {
+    setIsDragging(false);
+  };
+
+  const reset = () => {
+    if (!originalImg) return;
+    setScale(1);
+    setPosition({ x: 0, y: 0 });
   };
 
   const doResize = async () => {
     if (!originalImg || uses >= maxUses) return;
     setProcessing(true);
     try {
-      const targetW = clamp(unit === 'cm' ? pxFromCm(width) : width, 1, origPxW || originalImg.width);
-      const targetH = clamp(Math.round(targetW / (origRatio || (originalImg.width / originalImg.height))), 1, origPxH || originalImg.height);
-
       const canvas = document.createElement('canvas');
-      canvas.width = targetW;
-      canvas.height = targetH;
+      canvas.width = width;
+      canvas.height = height;
       const ctx = canvas.getContext('2d')!;
       ctx.imageSmoothingEnabled = true;
       ctx.imageSmoothingQuality = 'high';
+      ctx.fillStyle = '#ffffff';
+      ctx.fillRect(0, 0, width, height);
 
-      // Multi-step downscaling for best quality
-      let currentCanvas = document.createElement('canvas');
-      currentCanvas.width = originalImg.width;
-      currentCanvas.height = originalImg.height;
-      let currentCtx = currentCanvas.getContext('2d')!;
-      currentCtx.drawImage(originalImg, 0, 0);
+      // Calculate the drawing dimensions
+      const drawWidth = originalImg.width * scale;
+      const drawHeight = originalImg.height * scale;
+      const drawX = (width / 2) - (drawWidth / 2) + position.x;
+      const drawY = (height / 2) - (drawHeight / 2) + position.y;
 
-      if (targetW < originalImg.width * 0.5 || targetH < originalImg.height * 0.5) {
-        // Step down in halves for quality
-        let cw = originalImg.width, ch = originalImg.height;
-        while (cw / 2 > targetW || ch / 2 > targetH) {
-          const stepCanvas = document.createElement('canvas');
-          stepCanvas.width = Math.max(targetW, Math.round(cw / 2));
-          stepCanvas.height = Math.max(targetH, Math.round(ch / 2));
-          const sCtx = stepCanvas.getContext('2d')!;
-          sCtx.imageSmoothingEnabled = true;
-          sCtx.imageSmoothingQuality = 'high';
-          sCtx.drawImage(currentCanvas, 0, 0, stepCanvas.width, stepCanvas.height);
-          currentCanvas = stepCanvas;
-          cw = stepCanvas.width;
-          ch = stepCanvas.height;
-        }
-      }
-
-      ctx.drawImage(currentCanvas, 0, 0, targetW, targetH);
+      ctx.drawImage(originalImg, drawX, drawY, drawWidth, drawHeight);
 
       canvas.toBlob((blob) => {
-        if (!blob) { toast.error('Failed'); return; }
+        if (!blob) {
+          toast.error(lang === 'ar' ? 'حدث خطأ' : 'Error occurred');
+          return;
+        }
         const url = URL.createObjectURL(blob);
         const a = document.createElement('a'); a.href = url;
-        a.download = `resized_${targetW}x${targetH}_${file?.name || 'image.png'}`;
+        a.download = `resized_${width}x${height}_${file?.name.replace(/\.[^.]+$/, '') || 'image'}.png`;
         a.click();
         URL.revokeObjectURL(url);
         recordUse();
-        addPoints?.(1); // Add points for using the tool
+        addPoints?.(1);
         toast.success(lang === 'ar' ? 'تم الحفظ بأعلى جودة! ✨' : 'Saved in high quality! ✨');
         setProcessing(false);
       }, 'image/png', 1.0);
@@ -231,22 +188,12 @@ const ImageResizer = ({ points, addPoints }: Props = {}) => {
     );
   }
 
-  const displayW = width;
-  const displayH = height;
-
-  const previewMaxW = 280;
-  const pxW = unit === 'cm' ? pxFromCm(width) : width;
-  const pxH = unit === 'cm' ? pxFromCm(height) : height;
-  const scale = pxW > 0 && pxH > 0 ? Math.min(previewMaxW / pxW, 180 / pxH, 1) : 1;
-  const previewW = Math.round(pxW * scale);
-  const previewH = Math.round(pxH * scale);
-
   return (
     <div dir={lang === 'ar' ? 'rtl' : 'ltr'} className="space-y-4">
       {/* Header */}
       <div className="flex items-center justify-between">
-        <button onClick={() => { if (previewUrl) URL.revokeObjectURL(previewUrl); setFile(null); setPreviewUrl(null); setOriginalImg(null); setOrigPxW(0); setOrigPxH(0); }}
-          className="text-orange-600 font-bold text-sm">
+        <button onClick={() => { setFile(null); setOriginalImg(null); }}
+          className="text-orange-600 font-bold text-sm flex items-center gap-1">
           {lang === 'ar' ? '→ رجوع' : '← Back'}
         </button>
         <div className="text-xs bg-orange-100 dark:bg-orange-900/30 text-orange-700 dark:text-orange-300 px-3 py-1 rounded-full font-bold">
@@ -254,60 +201,82 @@ const ImageResizer = ({ points, addPoints }: Props = {}) => {
         </div>
       </div>
 
-      {/* Visual Preview */}
-      <div className="bg-[#f0f4f8] dark:bg-slate-800 rounded-2xl p-4 flex flex-col items-center justify-center min-h-[220px] border border-border relative overflow-hidden">
+      {/* Interactive Canvas Preview */}
+      <div
+        ref={previewRef}
+        className="bg-[#f0f4f8] dark:bg-slate-800 rounded-2xl border border-border relative overflow-hidden flex items-center justify-center"
+        style={{ width: '100%', aspectRatio: '1/1', minHeight: 300 }}
+        onMouseDown={handleMouseDown}
+        onMouseMove={handleMouseMove}
+        onMouseUp={handleMouseUp}
+        onMouseLeave={handleMouseLeave}
+      >
+        {/* Checkerboard background for transparency */}
         <div className="absolute inset-0 opacity-30"
-          style={{ backgroundImage: 'linear-gradient(#ccc 1px, transparent 1px), linear-gradient(90deg, #ccc 1px, transparent 1px)', backgroundSize: '20px 20px' }} />
-        {previewUrl && (
-          <div className="relative z-10 shadow-2xl" style={{ width: previewW, height: previewH, minWidth: 40, minHeight: 40 }}>
-            <img src={previewUrl} className="w-full h-full object-contain" alt="preview" />
+          style={{ backgroundImage: 'linear-gradient(45deg, #ccc 25%, transparent 25%), linear-gradient(-45deg, #ccc 25%, transparent 25%), linear-gradient(45deg, transparent 75%, #ccc 75%), linear-gradient(-45deg, transparent 75%, #ccc 75%)', backgroundSize: '20px 20px', backgroundPosition: '0 0, 0 10px, 10px -10px, -10px 0px' }}
+        />
+
+        {/* Crop frame indicator */}
+        <div className="absolute border-4 border-orange-500 rounded-lg pointer-events-none" style={{ width: Math.min(300, width/2), height: Math.min(300, height/2) }} />
+
+        {/* Image overlay */}
+        {originalImg && (
+          <img
+            src={originalImg.src}
+            alt="preview"
+            draggable={false}
+            className="pointer-events-none select-none shadow-xl"
+            style={{
+              transform: `translate(${position.x}px, ${position.y}px) scale(${scale})`,
+              maxWidth: 'none',
+              maxHeight: 'none'
+            }}
+          />
+        )}
+
+        {isDragging && (
+          <div className="absolute bottom-3 left-1/2 -translate-x-1/2 bg-black/70 text-white px-3 py-1 rounded-full text-xs font-bold">
+            {lang === 'ar' ? 'جارِ السحب...' : 'Dragging...'}
           </div>
         )}
-        <div className="absolute bottom-2 right-2 z-10 bg-black/60 text-white text-[10px] font-mono px-2 py-0.5 rounded">
-          {pxW} × {pxH} px
-        </div>
       </div>
 
-      {/* Quick Presets */}
-      <div>
-        <p className="text-xs font-bold text-muted-foreground mb-2">{lang === 'ar' ? 'مقاسات سريعة:' : 'Quick presets:'}</p>
-        <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-none">
-          {PRESETS.map(p => (
-            <button key={p.label} onClick={() => applyPreset(p.w, p.h)}
-              className="flex-shrink-0 flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-secondary border border-border text-xs font-bold hover:border-orange-400 hover:bg-orange-50 dark:hover:bg-orange-950/20 transition-colors whitespace-nowrap">
-              <span>{p.icon}</span> {p.label}
-            </button>
-          ))}
-        </div>
-      </div>
-
-      {/* Dimensions */}
+      {/* Controls */}
       <div className="bg-card border border-border rounded-2xl p-4 space-y-4">
-        {/* Unit Toggle */}
-        <div className="flex bg-secondary rounded-xl p-1">
-          <button onClick={() => switchUnit('px')}
-            className={`flex-1 py-1.5 rounded-lg text-xs font-bold transition-all ${unit === 'px' ? 'bg-orange-500 text-white shadow' : 'text-muted-foreground'}`}>
-            Pixels (px)
-          </button>
-          <button onClick={() => switchUnit('cm')}
-            className={`flex-1 py-1.5 rounded-lg text-xs font-bold transition-all ${unit === 'cm' ? 'bg-orange-500 text-white shadow' : 'text-muted-foreground'}`}>
-            Centimeters (cm)
-          </button>
-        </div>
-
         <div className="grid grid-cols-2 gap-3">
           <div className="space-y-1">
-            <label className="text-[10px] font-extrabold text-muted-foreground uppercase">{lang === 'ar' ? 'العرض' : 'Width'} ({unit})</label>
-            <input type="number" value={displayW} min={1}
-              onChange={e => handleWidthChange(Number(e.target.value))}
+            <label className="text-[10px] font-extrabold text-muted-foreground uppercase">{lang === 'ar' ? 'العرض' : 'Width'} (px)</label>
+            <input type="number" value={width} min={1} max={5000}
+              onChange={e => setWidth(Math.max(1, Number(e.target.value)))}
               className="w-full text-center text-lg font-mono font-bold bg-secondary border-none rounded-xl p-3 outline-none focus:ring-2 ring-orange-400" />
           </div>
           <div className="space-y-1">
-            <label className="text-[10px] font-extrabold text-muted-foreground uppercase">{lang === 'ar' ? 'الطول' : 'Height'} ({unit})</label>
-            <input type="number" value={displayH} min={1}
-              onChange={e => handleHeightChange(Number(e.target.value))}
+            <label className="text-[10px] font-extrabold text-muted-foreground uppercase">{lang === 'ar' ? 'الطول' : 'Height'} (px)</label>
+            <input type="number" value={height} min={1} max={5000}
+              onChange={e => setHeight(Math.max(1, Number(e.target.value)))}
               className="w-full text-center text-lg font-mono font-bold bg-secondary border-none rounded-xl p-3 outline-none focus:ring-2 ring-orange-400" />
           </div>
+        </div>
+
+        <div className="space-y-1">
+          <div className="flex items-center justify-between text-sm">
+            <span className="font-extrabold text-muted-foreground">{lang === 'ar' ? 'المقياس' : 'Scale'}: {Math.round(scale * 100)}%</span>
+            <div className="flex gap-2">
+              <button onClick={() => setScale(Math.max(0.1, scale - 0.1))} className="p-1.5 rounded-lg bg-secondary hover:bg-orange-100 dark:hover:bg-orange-900/30 transition-colors">
+                <ZoomOut size={18} />
+              </button>
+              <button onClick={() => setScale(Math.min(5, scale + 0.1))} className="p-1.5 rounded-lg bg-secondary hover:bg-orange-100 dark:hover:bg-orange-900/30 transition-colors">
+                <ZoomIn size={18} />
+              </button>
+              <button onClick={reset} className="px-3 py-1.5 rounded-lg bg-orange-100 dark:bg-orange-900/30 text-orange-700 dark:text-orange-300 text-xs font-bold transition-colors">
+                {lang === 'ar' ? 'إعادة ضبط' : 'Reset'}
+              </button>
+            </div>
+          </div>
+          <input type="range" min={0.1} max={5} step={0.05} value={scale}
+            onChange={e => setScale(Number(e.target.value))}
+            className="w-full accent-orange-500"
+          />
         </div>
       </div>
 

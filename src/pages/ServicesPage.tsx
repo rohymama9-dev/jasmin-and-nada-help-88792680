@@ -98,7 +98,7 @@ const ServicesPage = ({ points, addPoints }: ServicesPageProps) => {
         case 'contact': return <CombinedOrderForm onClose={() => setActiveService(null)} lang={lang} hideOffers={true} />;
         case 'compressor': return <FileCompressor />;
         case 'converter': return <FormatConverter />;
-        case 'resizer': return <ImageResizer />;
+        case 'resizer': return <ImageResizer points={points} addPoints={addPoints} />;
         default: return null;
       }
     };
