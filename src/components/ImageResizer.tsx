@@ -22,7 +22,12 @@ const PRESETS = [
   { label: 'A4', w: 2480, h: 3508, icon: '📄' },
 ];
 
-const ImageResizer = () => {
+interface Props {
+  points?: number;
+  addPoints?: (n: number) => void;
+}
+
+const ImageResizer = ({ points, addPoints }: Props = {}) => {
   const { lang } = useLang();
   const [uses, setUses] = useState(0);
   const [maxUses, setMaxUses] = useState(DEFAULT_MAX_USES);
@@ -167,13 +172,14 @@ const ImageResizer = () => {
         if (!blob) { toast.error('Failed'); return; }
         const url = URL.createObjectURL(blob);
         const a = document.createElement('a'); a.href = url;
-        a.download = `resized_${targetW}x${targetH}_${file?.name || 'image.jpg'}`;
+        a.download = `resized_${targetW}x${targetH}_${file?.name || 'image.png'}`;
         a.click();
         URL.revokeObjectURL(url);
         recordUse();
+        addPoints?.(1); // Add points for using the tool
         toast.success(lang === 'ar' ? 'تم الحفظ بأعلى جودة! ✨' : 'Saved in high quality! ✨');
         setProcessing(false);
-      }, file?.type || 'image/jpeg', 1.0);
+      }, 'image/png', 1.0);
     } catch {
       toast.error(lang === 'ar' ? 'حدث خطأ' : 'Error occurred');
       setProcessing(false);

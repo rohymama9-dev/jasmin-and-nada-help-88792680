@@ -85,15 +85,39 @@ const EducationPage = ({ points, educationPoints, addPoints }: Props) => {
       }
 
       const buf = await f.arrayBuffer();
-      const loadingTask = getDocument({ data: new Uint8Array(buf) });
+      const loadingTask = getDocument({
+        data: new Uint8Array(buf),
+        cMapUrl: 'https://cdn.jsdelivr.net/npm/pdfjs-dist@4.10.38/cmaps/',
+        cMapPacked: true,
+        standardFontDataUrl: 'https://cdn.jsdelivr.net/npm/pdfjs-dist@4.10.38/standard_fonts/'
+      });
       const pdf = await loadingTask.promise;
       const pages: DocPage[] = [];
       for (let pageNum = 1; pageNum <= pdf.numPages; pageNum++) {
         const page = await pdf.getPage(pageNum);
         const content = await page.getTextContent();
-        const text = normalizeWhitespace(
-          (content.items as Array<{ str?: string }>).map(it => it.str || '').join(' ')
-        );
+        
+        // Custom text assembly to fix Arabic fragmenting (joining characters without spaces)
+        let pageText = '';
+        let lastY = -1;
+        
+        for (const item of content.items as any[]) {
+          if (!item.str) continue;
+          
+          // If Y coordinate changed significantly, it's a new line
+          if (lastY !== -1 && Math.abs(item.transform[5] - lastY) > 5) {
+            pageText += ' ';
+          } else if (lastY !== -1 && item.hasEOL) {
+            pageText += ' ';
+          }
+          
+          // Remove zero-width spaces and other invisible formatting characters
+          const cleanStr = item.str.replace(/[\u200B-\u200D\uFEFF]/g, '');
+          pageText += cleanStr;
+          lastY = item.transform[5];
+        }
+        
+        const text = normalizeWhitespace(pageText);
         pages.push({ page: pageNum, text });
       }
       setDocPages(pages);
