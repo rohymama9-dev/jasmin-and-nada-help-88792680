@@ -42,13 +42,10 @@ export default defineConfig({
         ]
       },
       workbox: {
-        // Only precache the app shell (JS/CSS/HTML) — images handled by runtime cache
         maximumFileSizeToCacheInBytes: 5 * 1024 * 1024, // 5MB for JS bundles
-        globPatterns: ['**/*.{js,css,html,ico,woff,woff2,ttf,eot}'],
-        // Runtime caching for images — works for ALL sizes including large coloring images
+        globPatterns: ['**/*.{js,css,html,ico,woff,woff2,ttf,eot,svg,json}'],
         runtimeCaching: [
           {
-            // Cache all images (local + external CDNs) so Quran images work offline
             urlPattern: ({ request }) => request.destination === 'image',
             handler: 'CacheFirst',
             options: {
@@ -61,7 +58,6 @@ export default defineConfig({
             },
           },
           {
-            // Cache Quran JSON texts (API responses)
             urlPattern: /^https:\/\/api\.alquran\.cloud\/.*/i,
             handler: 'CacheFirst',
             options: {
@@ -74,21 +70,35 @@ export default defineConfig({
             },
           },
           {
-            // Exclude AI/Video conversion tools from caching (they require network or WASM)
-            urlPattern: /\/tools\/(?:ai|video|format-converter)/i,
-            handler: 'NetworkOnly',
+            urlPattern: /^https:\/\/cdn\.islamic\.network\/quran\/audio\/.*/i,
+            handler: 'CacheFirst',
             options: {
-              cacheName: 'tools-excluded',
+              cacheName: 'quran-audio-cache-v1',
+              expiration: {
+                maxEntries: 1200,
+                maxAgeSeconds: 60 * 60 * 24 * 365,
+              },
+              cacheableResponse: { statuses: [0, 200] },
             },
           },
           {
-            // Google Fonts
+            urlPattern: /^https:\/\/(?:cdn\.jsdelivr\.net|tessdata\.projectnaptha\.com)\/.*/i,
+            handler: 'StaleWhileRevalidate',
+            options: {
+              cacheName: 'ocr-assets-cache-v1',
+              expiration: {
+                maxEntries: 200,
+                maxAgeSeconds: 60 * 60 * 24 * 365,
+              },
+              cacheableResponse: { statuses: [0, 200] },
+            },
+          },
+          {
             urlPattern: /^https:\/\/fonts\.googleapis\.com\/.*/i,
             handler: 'StaleWhileRevalidate',
             options: { cacheName: 'google-fonts-cache' },
           },
           {
-            // Google Fonts static files
             urlPattern: /^https:\/\/fonts\.gstatic\.com\/.*/i,
             handler: 'CacheFirst',
             options: {
@@ -97,6 +107,18 @@ export default defineConfig({
                 maxEntries: 30,
                 maxAgeSeconds: 60 * 60 * 24 * 365, // 1 year
               },
+            },
+          },
+          {
+            urlPattern: ({ url }) => url.pathname.startsWith('/quran/'),
+            handler: 'CacheFirst',
+            options: {
+              cacheName: 'quran-shell-cache-v1',
+              expiration: {
+                maxEntries: 50,
+                maxAgeSeconds: 60 * 60 * 24 * 365,
+              },
+              cacheableResponse: { statuses: [0, 200] },
             },
           },
         ],

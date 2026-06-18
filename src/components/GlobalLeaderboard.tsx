@@ -16,6 +16,12 @@ type LeaderboardEntry = {
   score: number;
 };
 
+const isMissingLeaderboardTable = (error: unknown) => {
+  const code = typeof error === 'object' && error && 'code' in error ? String((error as { code?: string }).code || '') : '';
+  const message = typeof error === 'object' && error && 'message' in error ? String((error as { message?: string }).message || '') : '';
+  return code === 'PGRST205' || message.includes("Could not find the table 'public.leaderboards'");
+};
+
 const getWeekStartDate = (date: Date) => {
   const result = new Date(date);
   const day = result.getDay();
@@ -72,6 +78,11 @@ const GlobalLeaderboard = ({ points, currentPoints, section = 'global' }: Global
       .limit(10);
 
     if (result.error) {
+      if (isMissingLeaderboardTable(result.error)) {
+        setLeaderboard([]);
+        setLoading(false);
+        return;
+      }
       console.warn('Leaderboard section load failed, retrying fallback:', result.error.message || result.error);
       const fallback = await (supabase as any)
         .from('leaderboards')
@@ -88,6 +99,11 @@ const GlobalLeaderboard = ({ points, currentPoints, section = 'global' }: Global
     }
 
     if (result.error) {
+      if (isMissingLeaderboardTable(result.error)) {
+        setLeaderboard([]);
+        setLoading(false);
+        return;
+      }
       console.error('Failed to load leaderboard:', result.error);
       setLeaderboard([]);
     } else {
@@ -150,6 +166,10 @@ const GlobalLeaderboard = ({ points, currentPoints, section = 'global' }: Global
       .limit(1);
 
     if (fetchError) {
+      if (isMissingLeaderboardTable(fetchError)) {
+        setSubmitting(false);
+        return;
+      }
       console.error('Leaderboard lookup failed:', fetchError);
       toast.error(lang === 'ar' ? 'حدث خطأ أثناء الإرسال' : 'Submission failed');
       setSubmitting(false);
@@ -187,6 +207,10 @@ const GlobalLeaderboard = ({ points, currentPoints, section = 'global' }: Global
     }
 
     if (mutationError) {
+      if (isMissingLeaderboardTable(mutationError)) {
+        setSubmitting(false);
+        return;
+      }
       console.error('Failed to save leaderboard entry:', mutationError);
       toast.error(lang === 'ar' ? 'فشل في حفظ النتيجة' : 'Failed to save score');
       setSubmitting(false);

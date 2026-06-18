@@ -15,10 +15,7 @@ import MathLab from '@/components/MathLab';
 import DictationPhonics from '@/components/DictationPhonics';
 import GrammarQuestions from '@/components/GrammarQuestions';
 import { useDailyComboChallenge } from '@/contexts/DailyComboChallengeContext';
-import { getDocument, GlobalWorkerOptions } from 'pdfjs-dist';
-import workerSrc from 'pdfjs-dist/build/pdf.worker.min.mjs?url';
-
-GlobalWorkerOptions.workerSrc = workerSrc;
+import { normalizeWhitespace, parseSupportedDocument } from '@/lib/documentTools';
 
 interface Props {
   points: number;
@@ -64,28 +61,7 @@ const EducationPage = ({ points, educationPoints, addPoints }: Props) => {
   const [searchQuery, setSearchQuery] = useState('');
   const [searchResults, setSearchResults] = useState<Array<{ page: number; index: number; snippet: string }>>([]);
   const [activePage, setActivePage] = useState(1);
-  const [ocrLoading, setOcrLoading] = useState(false);
-  const [ocrError, setOcrError] = useState<string | null>(null);
-  const [ocrText, setOcrText] = useState('');
   const pageViewerRef = useRef<HTMLDivElement>(null);
-
-  const normalizeWhitespace = (s: string) => s.replace(/\s+/g, ' ').trim();
-
-  const normalizeArabicText = (text: string): string => {
-    if (!text) return '';
-
-    // Step 1: Remove all zero-width and invisible characters
-    let cleaned = text.replace(/[\u200B-\u200D\uFEFF\u200E\u200F\u202A-\u202E]/g, '');
-    
-    // Step 2: Detect if text contains Arabic characters
-    const arabicRegex = /[\u0600-\u06FF\u0750-\u077F\u08A0-\u08FF]/;
-    if (!arabicRegex.test(cleaned)) return normalizeWhitespace(cleaned);
-
-    // Step 3: Fix character spacing issues (remove spaces between Arabic characters)
-    cleaned = cleaned.replace(/([\u0600-\u06FF\u0750-\u077F\u08A0-\u08FF])\s+([\u0600-\u06FF\u0750-\u077F\u08A0-\u08FF])/g, '$1$2');
-
-    return normalizeWhitespace(cleaned);
-  };
 
   const parseDocument = async (f: File) => {
     setDocLoading(true);
@@ -95,54 +71,14 @@ const EducationPage = ({ points, educationPoints, addPoints }: Props) => {
     setSearchQuery('');
     setSearchResults([]);
     try {
-      const isPdf = f.type === 'application/pdf' || f.name.toLowerCase().endsWith('.pdf');
-      if (!isPdf) {
-        const text = normalizeWhitespace(await f.text());
-        setDocPages([{ page: 1, text }]);
-        setDocText(text);
-        return;
+      const parsed = await parseSupportedDocument(f);
+      setDocPages(parsed.pages as DocPage[]);
+      setDocText(parsed.text);
+      if (!parsed.text) {
+        setDocError(t('تم فتح الملف لكن لم يتم العثور على نص واضح داخله بعد.', 'The file opened, but no clear text was found inside it yet.'));
       }
-
-      const buf = await f.arrayBuffer();
-      const loadingTask = getDocument({
-        data: new Uint8Array(buf),
-        cMapUrl: 'https://cdn.jsdelivr.net/npm/pdfjs-dist@4.10.38/cmaps/',
-        cMapPacked: true,
-        standardFontDataUrl: 'https://cdn.jsdelivr.net/npm/pdfjs-dist@4.10.38/standard_fonts/'
-      });
-      const pdf = await loadingTask.promise;
-      const pages: DocPage[] = [];
-      for (let pageNum = 1; pageNum <= pdf.numPages; pageNum++) {
-        const page = await pdf.getPage(pageNum);
-        const content = await page.getTextContent();
-        
-        // Custom text assembly to fix Arabic fragmenting (joining characters without spaces)
-        let pageText = '';
-        let lastY = -1;
-        
-        for (const item of content.items as any[]) {
-          if (!item.str) continue;
-          
-          // If Y coordinate changed significantly, it's a new line
-          if (lastY !== -1 && Math.abs(item.transform[5] - lastY) > 5) {
-            pageText += ' ';
-          } else if (lastY !== -1 && item.hasEOL) {
-            pageText += ' ';
-          }
-          
-          // Remove zero-width spaces and other invisible formatting characters
-          const cleanStr = item.str.replace(/[\u200B-\u200D\uFEFF]/g, '');
-          pageText += cleanStr;
-          lastY = item.transform[5];
-        }
-        
-        const text = normalizeArabicText(pageText);
-        pages.push({ page: pageNum, text });
-      }
-      setDocPages(pages);
-      setDocText(pages.map(p => p.text).join('\n'));
     } catch {
-      setDocError(t('فشل قراءة المستند', 'Failed to read document'));
+      setDocError(t('تعذر قراءة هذا المستند الآن. جرّبي ملفًا أوضح أو محفوظًا بصيغة قياسية.', 'This document could not be read right now. Try a clearer file or a standard saved copy.'));
     } finally {
       setDocLoading(false);
     }
@@ -197,50 +133,6 @@ const EducationPage = ({ points, educationPoints, addPoints }: Props) => {
 
     const fallback = words.slice(0, 6).join(' ');
     return fallback.length >= 6 ? fallback : null;
-  };
-
-  const runOcrSearch = async (imageFile: File) => {
-    if (!docText || docLoading) return;
-    setOcrLoading(true);
-    setOcrError(null);
-    setOcrText('');
-    try {
-      const mod = await import('tesseract.js');
-      const worker = await mod.createWorker();
-      await worker.loadLanguage('ara+eng');
-      await worker.initialize('ara+eng');
-      const { data } = await worker.recognize(imageFile);
-      await worker.terminate();
-
-      const extracted = normalizeWhitespace(data?.text || '');
-      setOcrText(extracted);
-      if (!extracted) {
-        setOcrError(t('لم يتم التعرف على نص من الصورة.', 'No text detected in the image.'));
-        return;
-      }
-
-      const q = findBestQueryInDocument(docText, extracted);
-      if (!q) {
-        setOcrError(t('لم يتم العثور على تطابق داخل المستند.', 'No match found inside the document.'));
-        return;
-      }
-
-      setSearchQuery(q);
-      const results = (() => {
-        const needle = q.toLowerCase();
-        for (const p of docPages) {
-          const idx = p.text.toLowerCase().indexOf(needle);
-          if (idx !== -1) return { page: p.page, index: idx };
-        }
-        return null;
-      })();
-      if (results) setActivePage(results.page);
-      toast.success(t('تم البحث من الصورة داخل المستند.', 'Searched inside the document from the image.'));
-    } catch {
-      setOcrError(t('فشل OCR. جرّب صورة أوضح.', 'OCR failed. Try a clearer image.'));
-    } finally {
-      setOcrLoading(false);
-    }
   };
 
   useEffect(() => {
@@ -493,8 +385,6 @@ const EducationPage = ({ points, educationPoints, addPoints }: Props) => {
                   setSearchQuery('');
                   setSearchResults([]);
                   setActivePage(1);
-                  setOcrError(null);
-                  setOcrText('');
                 }}
                 className="px-3 py-2 rounded-xl bg-secondary text-muted-foreground text-xs font-bold hover:bg-secondary/80 transition"
               >
@@ -521,43 +411,6 @@ const EducationPage = ({ points, educationPoints, addPoints }: Props) => {
                 disabled={!docText || docLoading}
                 className="flex-1 px-3 py-2 rounded-xl bg-secondary/60 border border-border text-sm outline-none focus:ring-2 ring-primary disabled:opacity-60"
               />
-            </div>
-
-            <div className="space-y-2">
-              <div className="flex items-center justify-between">
-                <p className="text-xs font-bold text-foreground">{t('بحث بالصورة (OCR)', 'Image-Based Search (OCR)')}</p>
-                <span className="text-[10px] text-muted-foreground font-semibold">{ocrLoading ? t('جاري OCR...', 'Running OCR...') : ''}</span>
-              </div>
-              <label className="relative flex items-center justify-center rounded-2xl border border-border bg-secondary/30 px-4 py-3 text-xs font-bold cursor-pointer hover:bg-secondary/50 transition-colors">
-                <input
-                  type="file"
-                  accept="image/*"
-                  disabled={ocrLoading}
-                  className="absolute inset-0 opacity-0 w-full h-full cursor-pointer disabled:cursor-not-allowed"
-                  onChange={e => {
-                    const f = e.target.files?.[0];
-                    if (!f) return;
-                    if (!docText || docLoading) {
-                      toast.error(t('ارفعي المستند أولاً ثم ارفعي صورة الصفحة.', 'Upload the document first, then upload the page image.'));
-                      e.currentTarget.value = '';
-                      return;
-                    }
-                    void runOcrSearch(f);
-                    e.currentTarget.value = '';
-                  }}
-                />
-                {t('ارفع صورة صفحة للبحث داخل المستند', 'Upload a page image to search inside the document')}
-              </label>
-              {ocrError && (
-                <div className="bg-destructive/10 border border-destructive/30 rounded-2xl p-3 text-sm text-destructive font-bold">
-                  {ocrError}
-                </div>
-              )}
-              {ocrText && (
-                <div className="rounded-2xl border border-border bg-secondary/30 p-3 text-xs leading-relaxed" style={{ textAlign: 'start', direction: lang === 'ar' ? 'rtl' : 'ltr' }}>
-                  {ocrText}
-                </div>
-              )}
             </div>
 
             {searchQuery.trim() && (
