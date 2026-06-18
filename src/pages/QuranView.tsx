@@ -139,7 +139,6 @@ const QuranView = () => {
             title={lang === 'ar' ? 'تطبيق القرآن الكريم' : 'Quran App'}
             className="w-full h-full border-0"
             allow="autoplay; clipboard-write; fullscreen; accelerometer; gyroscope; picture-in-picture"
-            referrerPolicy="no-referrer"
             loading="lazy"
           />
         ) : (
