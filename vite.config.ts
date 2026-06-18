@@ -63,51 +63,12 @@ export default defineConfig({
           {
             // Cache Quran JSON texts (API responses)
             urlPattern: /^https:\/\/api\.alquran\.cloud\/.*/i,
-            handler: 'StaleWhileRevalidate',
+            handler: 'CacheFirst',
             options: {
               cacheName: 'quran-text-cache-v1',
               expiration: {
-                maxEntries: 200,
-                maxAgeSeconds: 60 * 60 * 24 * 30, // 30 days
-              },
-              cacheableResponse: { statuses: [0, 200] },
-            },
-          },
-          {
-            // Cache Quran MP3 audio streams
-            urlPattern: /^https:\/\/cdn\.islamic\.network\/quran\/audio\/.*\.mp3$/i,
-            handler: 'CacheFirst',
-            options: {
-              cacheName: 'quran-audio-cache-v1',
-              expiration: {
-                maxEntries: 7000,
-                maxAgeSeconds: 60 * 60 * 24 * 180,
-              },
-              cacheableResponse: { statuses: [0, 200] },
-            },
-          },
-          {
-            // Cache other audio files (exercises, etc.)
-            urlPattern: /\.(?:mp3|wav|ogg|m4a)$/i,
-            handler: 'CacheFirst',
-            options: {
-              cacheName: 'audio-cache-v1',
-              expiration: {
-                maxEntries: 100,
-                maxAgeSeconds: 60 * 60 * 24 * 60, // 60 days
-              },
-              cacheableResponse: { statuses: [0, 200] },
-            },
-          },
-          {
-            // Cache JSON data files
-            urlPattern: /\.(?:json)$/i,
-            handler: 'StaleWhileRevalidate',
-            options: {
-              cacheName: 'json-cache-v1',
-              expiration: {
-                maxEntries: 100,
-                maxAgeSeconds: 60 * 60 * 24 * 30, // 30 days
+                maxEntries: 500,
+                maxAgeSeconds: 60 * 60 * 24 * 365, // 1 year
               },
               cacheableResponse: { statuses: [0, 200] },
             },

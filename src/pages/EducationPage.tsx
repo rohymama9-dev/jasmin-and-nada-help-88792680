@@ -1,5 +1,5 @@
-import { useEffect, useMemo, useState, useRef } from 'react';
-import { GraduationCap, Volume2, ArrowLeft, Check, Search, Upload } from 'lucide-react';
+import { useEffect, useMemo, useRef, useState } from 'react';
+import { GraduationCap, Volume2, ArrowLeft, Check, Search } from 'lucide-react';
 import { useLang } from '@/contexts/LanguageContext';
 import { lsGetJSON, lsSetJSON } from '@/lib/userStorage';
 import GlobalLeaderboard from '@/components/GlobalLeaderboard';
@@ -34,6 +34,7 @@ const EducationPage = ({ points, educationPoints, addPoints }: Props) => {
   const { lang } = useLang();
   const { updateChallenge } = useDailyComboChallenge();
   
+  // تاম نقل activeTab هنا لأعلى لتجنب أخطاء React Hooks
   const [activeTab, setActiveTab] = useState<'math' | 'dictation' | 'grammarQuestions' | 'docs'>('math');
   
   const [activeCat, setActiveCat] = useState<LessonCategory | null>(null);
@@ -42,6 +43,7 @@ const EducationPage = ({ points, educationPoints, addPoints }: Props) => {
     () => new Set(lsGetJSON<string[]>(COMPLETED_BASE, [])),
   );
 
+  // Re-hydrate when the guest name changes (logout / fresh name).
   useEffect(() => {
     const sync = () => setCompleted(new Set(lsGetJSON<string[]>(COMPLETED_BASE, [])));
     window.addEventListener('guest-name-changed', sync);
@@ -61,18 +63,27 @@ const EducationPage = ({ points, educationPoints, addPoints }: Props) => {
   const [docError, setDocError] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [searchResults, setSearchResults] = useState<Array<{ page: number; index: number; snippet: string }>>([]);
-  const [summary, setSummary] = useState('');
-  const [selectedPage, setSelectedPage] = useState<number | null>(null);
+  const [activePage, setActivePage] = useState(1);
+  const [ocrLoading, setOcrLoading] = useState(false);
+  const [ocrError, setOcrError] = useState<string | null>(null);
+  const [ocrText, setOcrText] = useState('');
+  const pageViewerRef = useRef<HTMLDivElement>(null);
 
   const normalizeWhitespace = (s: string) => s.replace(/\s+/g, ' ').trim();
 
-  // Fixed Arabic normalization function
   const normalizeArabicText = (text: string): string => {
     if (!text) return '';
-    let cleaned = text
-      .replace(/[\u200B-\u200D\uFEFF\u200E\u200F\u202A-\u202E]/g, '')
-      // Remove spaces between Arabic characters
-      .replace(/([\u0600-\u06FF\u0750-\u077F\u08A0-\u08FF])\s+([\u0600-\u06FF\u0750-\u077F\u08A0-\u08FF])/g, '$1$2');
+
+    // Step 1: Remove all zero-width and invisible characters
+    let cleaned = text.replace(/[\u200B-\u200D\uFEFF\u200E\u200F\u202A-\u202E]/g, '');
+    
+    // Step 2: Detect if text contains Arabic characters
+    const arabicRegex = /[\u0600-\u06FF\u0750-\u077F\u08A0-\u08FF]/;
+    if (!arabicRegex.test(cleaned)) return normalizeWhitespace(cleaned);
+
+    // Step 3: Fix character spacing issues (remove spaces between Arabic characters)
+    cleaned = cleaned.replace(/([\u0600-\u06FF\u0750-\u077F\u08A0-\u08FF])\s+([\u0600-\u06FF\u0750-\u077F\u08A0-\u08FF])/g, '$1$2');
+
     return normalizeWhitespace(cleaned);
   };
 
@@ -83,12 +94,10 @@ const EducationPage = ({ points, educationPoints, addPoints }: Props) => {
     setDocText('');
     setSearchQuery('');
     setSearchResults([]);
-    setSummary('');
-    setSelectedPage(null);
     try {
       const isPdf = f.type === 'application/pdf' || f.name.toLowerCase().endsWith('.pdf');
       if (!isPdf) {
-        const text = normalizeArabicText(await f.text());
+        const text = normalizeWhitespace(await f.text());
         setDocPages([{ page: 1, text }]);
         setDocText(text);
         return;
@@ -107,18 +116,21 @@ const EducationPage = ({ points, educationPoints, addPoints }: Props) => {
         const page = await pdf.getPage(pageNum);
         const content = await page.getTextContent();
         
+        // Custom text assembly to fix Arabic fragmenting (joining characters without spaces)
         let pageText = '';
         let lastY = -1;
         
         for (const item of content.items as any[]) {
           if (!item.str) continue;
           
+          // If Y coordinate changed significantly, it's a new line
           if (lastY !== -1 && Math.abs(item.transform[5] - lastY) > 5) {
             pageText += ' ';
           } else if (lastY !== -1 && item.hasEOL) {
             pageText += ' ';
           }
           
+          // Remove zero-width spaces and other invisible formatting characters
           const cleanStr = item.str.replace(/[\u200B-\u200D\uFEFF]/g, '');
           pageText += cleanStr;
           lastY = item.transform[5];
@@ -163,41 +175,81 @@ const EducationPage = ({ points, educationPoints, addPoints }: Props) => {
     setSearchResults(computedResults);
   }, [computedResults]);
 
-  const summarizeText = (text: string) => {
-    const cleaned = normalizeWhitespace(text);
-    if (!cleaned) return '';
-    const rawSentences = cleaned.split(/(?<=[.!?؟])\s+/).map(s => s.trim()).filter(Boolean);
-    const sentences = rawSentences.slice(0, 400);
-    if (sentences.length <= 3) return sentences.join(' ');
+  const normalizeForSearch = (s: string) =>
+    normalizeWhitespace(s)
+      .replace(/[^\p{L}\p{N}\s]+/gu, ' ')
+      .replace(/\s+/g, ' ')
+      .trim();
 
-    const stop = new Set([
-      'the','a','an','and','or','to','of','in','on','for','with','as','at','by','from','is','are','was','were','be','been','it','this','that','these','those',
-      'و','في','على','إلى','من','عن','أن','إن','كان','كانت','يكون','تكون','هو','هي','هم','هن','هذا','هذه','ذلك','تلك','هناك','هنا','ثم','أو','لكن','كما','ما','لا','لم','لن','قد','حتى',
-    ]);
+  const findBestQueryInDocument = (doc: string, ocr: string) => {
+    const docNorm = normalizeForSearch(doc).toLowerCase();
+    const words = normalizeForSearch(ocr).split(' ').filter(w => w.length >= 2);
+    if (words.length === 0) return null;
 
-    const freq = new Map<string, number>();
-    const tokenize = (s: string) =>
-      s
-        .toLowerCase()
-        .replace(/[^\p{L}\p{N}\s]+/gu, ' ')
-        .split(/\s+/)
-        .filter(w => w.length >= 2 && !stop.has(w));
-
-    for (const s of sentences) {
-      for (const w of tokenize(s)) freq.set(w, (freq.get(w) || 0) + 1);
+    const maxWindow = Math.min(10, words.length);
+    for (let windowSize = maxWindow; windowSize >= 2; windowSize--) {
+      for (let i = 0; i + windowSize <= words.length; i++) {
+        const phrase = words.slice(i, i + windowSize).join(' ');
+        if (phrase.length < 6) continue;
+        if (docNorm.includes(phrase.toLowerCase())) return phrase;
+      }
     }
 
-    const scored = sentences.map((s, i) => {
-      const words = tokenize(s);
-      const sum = words.reduce((acc, w) => acc + (freq.get(w) || 0), 0);
-      const score = sum / Math.max(8, words.length);
-      return { i, s, score };
-    });
-
-    const take = Math.min(7, Math.max(3, Math.round(sentences.length * 0.15)));
-    const top = scored.sort((a, b) => b.score - a.score).slice(0, take).sort((a, b) => a.i - b.i);
-    return top.map(x => x.s).join(' ');
+    const fallback = words.slice(0, 6).join(' ');
+    return fallback.length >= 6 ? fallback : null;
   };
+
+  const runOcrSearch = async (imageFile: File) => {
+    if (!docText || docLoading) return;
+    setOcrLoading(true);
+    setOcrError(null);
+    setOcrText('');
+    try {
+      const mod = await import('tesseract.js');
+      const worker = await mod.createWorker();
+      await worker.loadLanguage('ara+eng');
+      await worker.initialize('ara+eng');
+      const { data } = await worker.recognize(imageFile);
+      await worker.terminate();
+
+      const extracted = normalizeWhitespace(data?.text || '');
+      setOcrText(extracted);
+      if (!extracted) {
+        setOcrError(t('لم يتم التعرف على نص من الصورة.', 'No text detected in the image.'));
+        return;
+      }
+
+      const q = findBestQueryInDocument(docText, extracted);
+      if (!q) {
+        setOcrError(t('لم يتم العثور على تطابق داخل المستند.', 'No match found inside the document.'));
+        return;
+      }
+
+      setSearchQuery(q);
+      const results = (() => {
+        const needle = q.toLowerCase();
+        for (const p of docPages) {
+          const idx = p.text.toLowerCase().indexOf(needle);
+          if (idx !== -1) return { page: p.page, index: idx };
+        }
+        return null;
+      })();
+      if (results) setActivePage(results.page);
+      toast.success(t('تم البحث من الصورة داخل المستند.', 'Searched inside the document from the image.'));
+    } catch {
+      setOcrError(t('فشل OCR. جرّب صورة أوضح.', 'OCR failed. Try a clearer image.'));
+    } finally {
+      setOcrLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    if (!pageViewerRef.current) return;
+    const q = normalizeWhitespace(searchQuery);
+    if (!q) return;
+    const el = pageViewerRef.current.querySelector('[data-doc-hit="1"]') as HTMLElement | null;
+    if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  }, [activePage, searchQuery]);
 
   const completeLesson = (lesson: Lesson) => {
     if (completed.has(lesson.id)) {
@@ -207,7 +259,7 @@ const EducationPage = ({ points, educationPoints, addPoints }: Props) => {
     const next = new Set(completed).add(lesson.id);
     setCompleted(next);
     lsSetJSON(COMPLETED_BASE, Array.from(next));
-    addPoints(3);
+    addPoints(3); // Set to 3 points per lesson as requested
     updateChallenge('education', true);
     toast.success(t(`+3 نقاط 🌟`, `+3 points 🌟`));
   };
@@ -242,6 +294,7 @@ const EducationPage = ({ points, educationPoints, addPoints }: Props) => {
             {lang === 'ar' ? lesson.titleAr : lesson.titleEn}
           </h2>
 
+          {/* Body — also tappable to hear the whole thing */}
           <button
             onClick={() => speak(lang === 'ar' ? lesson.bodyAr : lesson.bodyEn, lang)}
             className="w-full rounded-xl bg-secondary/40 hover:bg-secondary/60 transition-all p-4"
@@ -255,6 +308,7 @@ const EducationPage = ({ points, educationPoints, addPoints }: Props) => {
             </p>
           </button>
 
+          {/* Per-item pronunciation */}
           {items.length > 0 && (
             <div className="space-y-2">
               <p className="text-xs font-semibold text-muted-foreground">
@@ -273,8 +327,10 @@ const EducationPage = ({ points, educationPoints, addPoints }: Props) => {
             </div>
           )}
 
+          {/* Pronunciation correction (STT) */}
           <PronunciationExercise target={lang === 'ar' ? lesson.bodyAr : lesson.bodyEn} lang={lang} />
 
+          {/* Interactive exercises */}
           <LessonExercises lesson={lesson} />
 
           <button
@@ -349,7 +405,7 @@ const EducationPage = ({ points, educationPoints, addPoints }: Props) => {
           {t('مركز التعليم', 'Education Center')}
         </h2>
         <GlobalLeaderboard currentPoints={educationPoints} section="education" />
-      <div className="flex justify-center gap-2 mt-4 flex-wrap">
+      <div className="flex justify-center gap-2 mt-4">
           <button
             onClick={() => setActiveTab('math')}
             className={`px-4 py-2 rounded-xl text-xs font-bold transition-all ${activeTab === 'math' ? 'gradient-primary text-white' : 'bg-secondary text-muted-foreground'}`}
@@ -410,6 +466,7 @@ const EducationPage = ({ points, educationPoints, addPoints }: Props) => {
                   const f = e.target.files?.[0];
                   if (!f) return;
                   setDocFile(f);
+                  setActivePage(1);
                   void parseDocument(f);
                 }}
               />
@@ -435,8 +492,9 @@ const EducationPage = ({ points, educationPoints, addPoints }: Props) => {
                   setDocError(null);
                   setSearchQuery('');
                   setSearchResults([]);
-                  setSummary('');
-                  setSelectedPage(null);
+                  setActivePage(1);
+                  setOcrError(null);
+                  setOcrText('');
                 }}
                 className="px-3 py-2 rounded-xl bg-secondary text-muted-foreground text-xs font-bold hover:bg-secondary/80 transition"
               >
@@ -448,22 +506,6 @@ const EducationPage = ({ points, educationPoints, addPoints }: Props) => {
           {docError && (
             <div className="bg-destructive/10 border border-destructive/30 rounded-2xl p-3 text-sm text-destructive font-bold">
               {docError}
-            </div>
-          )}
-
-          {selectedPage !== null && (
-            <div className="bg-blue-50 dark:bg-blue-950/20 border border-blue-200 dark:border-blue-800 rounded-2xl p-3">
-              <div className="flex justify-between items-center mb-2">
-                <span className="text-xs font-bold text-blue-700 dark:text-blue-300">
-                  {t('معاينة صفحة', 'Previewing Page')} {selectedPage}
-                </span>
-                <button onClick={() => setSelectedPage(null)} className="text-xs text-muted-foreground hover:text-foreground">
-                  ×
-                </button>
-              </div>
-              <div className="text-sm text-foreground leading-relaxed p-2 bg-white dark:bg-slate-900 rounded-lg border border-border" dir="auto">
-                {docPages.find(p => p.page === selectedPage)?.text}
-              </div>
             </div>
           )}
 
@@ -481,6 +523,38 @@ const EducationPage = ({ points, educationPoints, addPoints }: Props) => {
               />
             </div>
 
+            <div className="space-y-2">
+              <div className="flex items-center justify-between">
+                <p className="text-xs font-bold text-foreground">{t('بحث بالصورة (OCR)', 'Image-Based Search (OCR)')}</p>
+                <span className="text-[10px] text-muted-foreground font-semibold">{ocrLoading ? t('جاري OCR...', 'Running OCR...') : ''}</span>
+              </div>
+              <label className={`relative flex items-center justify-center rounded-2xl border border-border bg-secondary/30 px-4 py-3 text-xs font-bold ${(!docText || docLoading) ? 'opacity-60 cursor-not-allowed' : 'cursor-pointer hover:bg-secondary/50'} transition-colors`}>
+                <input
+                  type="file"
+                  accept="image/*"
+                  disabled={!docText || docLoading || ocrLoading}
+                  className="absolute inset-0 opacity-0 w-full h-full cursor-pointer disabled:cursor-not-allowed"
+                  onChange={e => {
+                    const f = e.target.files?.[0];
+                    if (!f) return;
+                    void runOcrSearch(f);
+                    e.currentTarget.value = '';
+                  }}
+                />
+                {t('ارفع صورة صفحة للبحث داخل المستند', 'Upload a page image to search inside the document')}
+              </label>
+              {ocrError && (
+                <div className="bg-destructive/10 border border-destructive/30 rounded-2xl p-3 text-sm text-destructive font-bold">
+                  {ocrError}
+                </div>
+              )}
+              {ocrText && (
+                <div className="rounded-2xl border border-border bg-secondary/30 p-3 text-xs leading-relaxed" style={{ textAlign: 'start', direction: lang === 'ar' ? 'rtl' : 'ltr' }}>
+                  {ocrText}
+                </div>
+              )}
+            </div>
+
             {searchQuery.trim() && (
               <div className="text-xs text-muted-foreground font-semibold">
                 {t('نتائج', 'Results')}: {searchResults.length}
@@ -489,41 +563,99 @@ const EducationPage = ({ points, educationPoints, addPoints }: Props) => {
 
             {searchResults.length > 0 && (
               <div className="space-y-2 max-h-64 overflow-auto pr-1">
-                {searchResults.map((r, i) => (
-                  <button 
-                    key={`${r.page}-${r.index}-${i}`} 
-                    onClick={() => setSelectedPage(r.page)}
-                    className="w-full text-start rounded-2xl border border-border bg-card hover:bg-primary/5 transition-all p-3 active:scale-[0.98]"
-                  >
-                    <div className="text-[10px] text-primary font-bold mb-1">
-                      {t('صفحة', 'Page')} {r.page} • {t('اضغط للذهاب', 'Click to go')}
-                    </div>
-                    <div className="text-sm text-foreground leading-relaxed" dir="auto">
-                      {r.snippet}
-                    </div>
-                  </button>
-                ))}
+                {searchResults.map((r, i) => {
+                  const q = normalizeWhitespace(searchQuery);
+                  const idx = r.snippet.toLowerCase().indexOf(q.toLowerCase());
+                  const before = idx >= 0 ? r.snippet.slice(0, idx) : r.snippet;
+                  const match = idx >= 0 ? r.snippet.slice(idx, idx + q.length) : '';
+                  const after = idx >= 0 ? r.snippet.slice(idx + q.length) : '';
+                  
+                  return (
+                    <button
+                      key={`${r.page}-${r.index}-${i}`}
+                      onClick={() => setActivePage(r.page)}
+                      className="w-full text-left rounded-2xl border border-border bg-card p-3 hover:bg-primary/5 transition"
+                    >
+                      <div className="text-[10px] text-primary font-bold mb-1">
+                        {t('صفحة', 'Page')} {r.page} • #{r.index}
+                      </div>
+                      <div className="text-sm text-foreground leading-relaxed" style={{ textAlign: 'start' }}>
+                        {before}
+                        <span className="bg-yellow-300 dark:bg-yellow-700 px-1 rounded">{match}</span>
+                        {after}
+                      </div>
+                    </button>
+                  );
+                })}
               </div>
             )}
           </div>
 
-          <div className="space-y-2">
-            <div className="flex items-center justify-between">
-              <p className="font-bold text-foreground text-sm">{t('تلخيص Extractive', 'Extractive Summarization')}</p>
-              <button
-                onClick={() => setSummary(summarizeText(docText))}
-                disabled={!docText || docLoading}
-                className="px-3 py-2 rounded-xl gradient-primary text-white text-xs font-extrabold disabled:opacity-60"
-              >
-                {t('تلخيص', 'Summarize')}
-              </button>
-            </div>
-            {summary && (
-              <div className="rounded-2xl border border-border bg-secondary/30 p-3 text-sm leading-relaxed" dir="auto">
-                {summary}
+          {/* Page viewer */}
+          {docPages.length > 0 && !docLoading && (
+            <div className="space-y-2">
+              <div className="flex items-center justify-between">
+                <p className="font-bold text-foreground text-sm">{t('عرض الصفحات', 'Page Viewer')}</p>
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={() => setActivePage(Math.max(1, activePage - 1))}
+                    disabled={activePage <= 1}
+                    className="px-2 py-1 rounded-lg bg-secondary text-xs font-bold disabled:opacity-50"
+                  >
+                    {lang === 'ar' ? '→' : '←'}
+                  </button>
+                  <span className="text-xs font-mono">{activePage} / {docPages.length}</span>
+                  <button
+                    onClick={() => setActivePage(Math.min(docPages.length, activePage + 1))}
+                    disabled={activePage >= docPages.length}
+                    className="px-2 py-1 rounded-lg bg-secondary text-xs font-bold disabled:opacity-50"
+                  >
+                    {lang === 'ar' ? '←' : '→'}
+                  </button>
+                </div>
               </div>
-            )}
-          </div>
+              <div
+                className="rounded-2xl border border-border bg-white dark:bg-slate-900 p-4 max-h-96 overflow-auto"
+                ref={pageViewerRef}
+                dir={lang === 'ar' ? 'rtl' : 'ltr'}
+                style={{ textAlign: 'start' }}
+              >
+                {(() => {
+                  const page = docPages.find(p => p.page === activePage)!;
+                  const q = normalizeWhitespace(searchQuery);
+                  
+                  if (!q) {
+                    return <p className="text-sm leading-relaxed text-foreground whitespace-pre-wrap">{page.text}</p>;
+                  }
+                  
+                  const parts: Array<string | JSX.Element> = [];
+                  let lastIndex = 0;
+                  let hits = 0;
+                  const lowerText = page.text.toLowerCase();
+                  const lowerQ = q.toLowerCase();
+                  
+                  for (;;) {
+                    const idx = lowerText.indexOf(lowerQ, lastIndex);
+                    if (idx === -1) {
+                      parts.push(page.text.slice(lastIndex));
+                      break;
+                    }
+                    parts.push(page.text.slice(lastIndex, idx));
+                    const hit = page.text.slice(idx, idx + q.length);
+                    if (hits === 0) {
+                      parts.push(<span key={idx} data-doc-hit="1" className="bg-yellow-300 dark:bg-yellow-700 px-1 rounded">{hit}</span>);
+                    } else {
+                      parts.push(<span key={idx} className="bg-yellow-300 dark:bg-yellow-700 px-1 rounded">{hit}</span>);
+                    }
+                    hits += 1;
+                    lastIndex = idx + q.length;
+                  }
+                  
+                  return <p className="text-sm leading-relaxed text-foreground whitespace-pre-wrap">{parts}</p>;
+                })()}
+              </div>
+            </div>
+          )}
         </div>
       )}
     </div>
