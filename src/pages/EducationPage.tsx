@@ -1,5 +1,5 @@
-import { useEffect, useMemo, useState } from 'react';
-import { GraduationCap, Volume2, ArrowLeft, Check, Search } from 'lucide-react';
+import { useEffect, useMemo, useState, useRef } from 'react';
+import { GraduationCap, Volume2, ArrowLeft, Check, Search, Upload } from 'lucide-react';
 import { useLang } from '@/contexts/LanguageContext';
 import { lsGetJSON, lsSetJSON } from '@/lib/userStorage';
 import GlobalLeaderboard from '@/components/GlobalLeaderboard';
@@ -34,7 +34,6 @@ const EducationPage = ({ points, educationPoints, addPoints }: Props) => {
   const { lang } = useLang();
   const { updateChallenge } = useDailyComboChallenge();
   
-  // تاম نقل activeTab هنا لأعلى لتجنب أخطاء React Hooks
   const [activeTab, setActiveTab] = useState<'math' | 'dictation' | 'grammarQuestions' | 'docs'>('math');
   
   const [activeCat, setActiveCat] = useState<LessonCategory | null>(null);
@@ -43,7 +42,6 @@ const EducationPage = ({ points, educationPoints, addPoints }: Props) => {
     () => new Set(lsGetJSON<string[]>(COMPLETED_BASE, [])),
   );
 
-  // Re-hydrate when the guest name changes (logout / fresh name).
   useEffect(() => {
     const sync = () => setCompleted(new Set(lsGetJSON<string[]>(COMPLETED_BASE, [])));
     window.addEventListener('guest-name-changed', sync);
@@ -64,52 +62,18 @@ const EducationPage = ({ points, educationPoints, addPoints }: Props) => {
   const [searchQuery, setSearchQuery] = useState('');
   const [searchResults, setSearchResults] = useState<Array<{ page: number; index: number; snippet: string }>>([]);
   const [summary, setSummary] = useState('');
+  const [selectedPage, setSelectedPage] = useState<number | null>(null);
 
   const normalizeWhitespace = (s: string) => s.replace(/\s+/g, ' ').trim();
 
+  // Fixed Arabic normalization function
   const normalizeArabicText = (text: string): string => {
     if (!text) return '';
-
-    // Step 1: Remove all zero-width and invisible characters
-    let cleaned = text.replace(/[\u200B-\u200D\uFEFF\u200E\u200F\u202A-\u202E]/g, '');
-    
-    // Step 2: Detect if text contains Arabic characters
-    const arabicRegex = /[\u0600-\u06FF\u0750-\u077F\u08A0-\u08FF]/;
-    if (!arabicRegex.test(cleaned)) return normalizeWhitespace(cleaned);
-
-    // Step 3: Fix character spacing issues (remove spaces between Arabic characters)
-    // Match sequences of Arabic characters separated by single spaces and join them
-    cleaned = cleaned.replace(/([\u0600-\u06FF\u0750-\u077F\u08A0-\u08FF])\s+([\u0600-\u06FF\u0750-\u077F\u08A0-\u08FF])/g, '$1$2');
-
-    // Step 4: Reverse only the Arabic segments (handle RTL correctly)
-    // Split into segments of Arabic and non-Arabic text
-    const segments = [];
-    let currentSegment = '';
-    let currentIsArabic = false;
-    
-    for (const char of cleaned) {
-      const isArabic = arabicRegex.test(char);
-      if (isArabic !== currentIsArabic) {
-        if (currentSegment) segments.push({ text: currentSegment, isArabic: currentIsArabic });
-        currentSegment = char;
-        currentIsArabic = isArabic;
-      } else {
-        currentSegment += char;
-      }
-    }
-    if (currentSegment) segments.push({ text: currentSegment, isArabic: currentIsArabic });
-
-    // Reverse each Arabic segment
-    const processedSegments = segments.map(seg => {
-      if (seg.isArabic) {
-        // Reverse the entire segment (fixes word order too)
-        return seg.text.split('').reverse().join('');
-      }
-      return seg.text;
-    });
-
-    // Join all segments back and normalize whitespace
-    return normalizeWhitespace(processedSegments.join(''));
+    let cleaned = text
+      .replace(/[\u200B-\u200D\uFEFF\u200E\u200F\u202A-\u202E]/g, '')
+      // Remove spaces between Arabic characters
+      .replace(/([\u0600-\u06FF\u0750-\u077F\u08A0-\u08FF])\s+([\u0600-\u06FF\u0750-\u077F\u08A0-\u08FF])/g, '$1$2');
+    return normalizeWhitespace(cleaned);
   };
 
   const parseDocument = async (f: File) => {
@@ -120,10 +84,11 @@ const EducationPage = ({ points, educationPoints, addPoints }: Props) => {
     setSearchQuery('');
     setSearchResults([]);
     setSummary('');
+    setSelectedPage(null);
     try {
       const isPdf = f.type === 'application/pdf' || f.name.toLowerCase().endsWith('.pdf');
       if (!isPdf) {
-        const text = normalizeWhitespace(await f.text());
+        const text = normalizeArabicText(await f.text());
         setDocPages([{ page: 1, text }]);
         setDocText(text);
         return;
@@ -142,21 +107,18 @@ const EducationPage = ({ points, educationPoints, addPoints }: Props) => {
         const page = await pdf.getPage(pageNum);
         const content = await page.getTextContent();
         
-        // Custom text assembly to fix Arabic fragmenting (joining characters without spaces)
         let pageText = '';
         let lastY = -1;
         
         for (const item of content.items as any[]) {
           if (!item.str) continue;
           
-          // If Y coordinate changed significantly, it's a new line
           if (lastY !== -1 && Math.abs(item.transform[5] - lastY) > 5) {
             pageText += ' ';
           } else if (lastY !== -1 && item.hasEOL) {
             pageText += ' ';
           }
           
-          // Remove zero-width spaces and other invisible formatting characters
           const cleanStr = item.str.replace(/[\u200B-\u200D\uFEFF]/g, '');
           pageText += cleanStr;
           lastY = item.transform[5];
@@ -245,7 +207,7 @@ const EducationPage = ({ points, educationPoints, addPoints }: Props) => {
     const next = new Set(completed).add(lesson.id);
     setCompleted(next);
     lsSetJSON(COMPLETED_BASE, Array.from(next));
-    addPoints(3); // Set to 3 points per lesson as requested
+    addPoints(3);
     updateChallenge('education', true);
     toast.success(t(`+3 نقاط 🌟`, `+3 points 🌟`));
   };
@@ -280,7 +242,6 @@ const EducationPage = ({ points, educationPoints, addPoints }: Props) => {
             {lang === 'ar' ? lesson.titleAr : lesson.titleEn}
           </h2>
 
-          {/* Body — also tappable to hear the whole thing */}
           <button
             onClick={() => speak(lang === 'ar' ? lesson.bodyAr : lesson.bodyEn, lang)}
             className="w-full rounded-xl bg-secondary/40 hover:bg-secondary/60 transition-all p-4"
@@ -294,7 +255,6 @@ const EducationPage = ({ points, educationPoints, addPoints }: Props) => {
             </p>
           </button>
 
-          {/* Per-item pronunciation */}
           {items.length > 0 && (
             <div className="space-y-2">
               <p className="text-xs font-semibold text-muted-foreground">
@@ -313,10 +273,8 @@ const EducationPage = ({ points, educationPoints, addPoints }: Props) => {
             </div>
           )}
 
-          {/* Pronunciation correction (STT) */}
           <PronunciationExercise target={lang === 'ar' ? lesson.bodyAr : lesson.bodyEn} lang={lang} />
 
-          {/* Interactive exercises */}
           <LessonExercises lesson={lesson} />
 
           <button
@@ -391,7 +349,7 @@ const EducationPage = ({ points, educationPoints, addPoints }: Props) => {
           {t('مركز التعليم', 'Education Center')}
         </h2>
         <GlobalLeaderboard currentPoints={educationPoints} section="education" />
-      <div className="flex justify-center gap-2 mt-4">
+      <div className="flex justify-center gap-2 mt-4 flex-wrap">
           <button
             onClick={() => setActiveTab('math')}
             className={`px-4 py-2 rounded-xl text-xs font-bold transition-all ${activeTab === 'math' ? 'gradient-primary text-white' : 'bg-secondary text-muted-foreground'}`}
@@ -478,6 +436,7 @@ const EducationPage = ({ points, educationPoints, addPoints }: Props) => {
                   setSearchQuery('');
                   setSearchResults([]);
                   setSummary('');
+                  setSelectedPage(null);
                 }}
                 className="px-3 py-2 rounded-xl bg-secondary text-muted-foreground text-xs font-bold hover:bg-secondary/80 transition"
               >
@@ -489,6 +448,22 @@ const EducationPage = ({ points, educationPoints, addPoints }: Props) => {
           {docError && (
             <div className="bg-destructive/10 border border-destructive/30 rounded-2xl p-3 text-sm text-destructive font-bold">
               {docError}
+            </div>
+          )}
+
+          {selectedPage !== null && (
+            <div className="bg-blue-50 dark:bg-blue-950/20 border border-blue-200 dark:border-blue-800 rounded-2xl p-3">
+              <div className="flex justify-between items-center mb-2">
+                <span className="text-xs font-bold text-blue-700 dark:text-blue-300">
+                  {t('معاينة صفحة', 'Previewing Page')} {selectedPage}
+                </span>
+                <button onClick={() => setSelectedPage(null)} className="text-xs text-muted-foreground hover:text-foreground">
+                  ×
+                </button>
+              </div>
+              <div className="text-sm text-foreground leading-relaxed p-2 bg-white dark:bg-slate-900 rounded-lg border border-border" dir="auto">
+                {docPages.find(p => p.page === selectedPage)?.text}
+              </div>
             </div>
           )}
 
@@ -515,14 +490,18 @@ const EducationPage = ({ points, educationPoints, addPoints }: Props) => {
             {searchResults.length > 0 && (
               <div className="space-y-2 max-h-64 overflow-auto pr-1">
                 {searchResults.map((r, i) => (
-                  <div key={`${r.page}-${r.index}-${i}`} className="rounded-2xl border border-border bg-card p-3">
-                    <div className="text-[10px] text-muted-foreground font-bold mb-1">
-                      {t('صفحة', 'Page')} {r.page} • #{r.index}
+                  <button 
+                    key={`${r.page}-${r.index}-${i}`} 
+                    onClick={() => setSelectedPage(r.page)}
+                    className="w-full text-start rounded-2xl border border-border bg-card hover:bg-primary/5 transition-all p-3 active:scale-[0.98]"
+                  >
+                    <div className="text-[10px] text-primary font-bold mb-1">
+                      {t('صفحة', 'Page')} {r.page} • {t('اضغط للذهاب', 'Click to go')}
                     </div>
-                    <div className="text-sm text-foreground leading-relaxed" style={{ textAlign: 'start' }}>
+                    <div className="text-sm text-foreground leading-relaxed" dir="auto">
                       {r.snippet}
                     </div>
-                  </div>
+                  </button>
                 ))}
               </div>
             )}
@@ -540,7 +519,7 @@ const EducationPage = ({ points, educationPoints, addPoints }: Props) => {
               </button>
             </div>
             {summary && (
-              <div className="rounded-2xl border border-border bg-secondary/30 p-3 text-sm leading-relaxed" style={{ textAlign: 'start' }}>
+              <div className="rounded-2xl border border-border bg-secondary/30 p-3 text-sm leading-relaxed" dir="auto">
                 {summary}
               </div>
             )}
