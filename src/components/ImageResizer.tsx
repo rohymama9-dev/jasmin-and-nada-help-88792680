@@ -20,11 +20,12 @@ interface Props {
   addPoints?: (n: number) => void;
 }
 
-type DragMode = 'move' | 'top' | 'bottom' | 'left' | 'right' | null;
+type DragMode = 'move' | 'top' | 'bottom' | 'left' | 'right' | 'tl' | 'tr' | 'bl' | 'br' | null;
 
 type Rect = { x: number; y: number; w: number; h: number };
 
 const clamp = (v: number, min: number, max: number) => Math.max(min, Math.min(max, v));
+const PX_PER_CM = 96 / 2.54;
 
 const ImageResizer = ({ addPoints }: Props = {}) => {
   const { lang } = useLang();
@@ -177,6 +178,38 @@ const ImageResizer = ({ addPoints }: Props = {}) => {
       setRect({ x: base.x, y: base.y, w: base.w, h: newH });
       return;
     }
+
+    if (dragMode === 'tl') {
+      const newX = clamp(base.x + dx, 0, base.x + base.w - minW);
+      const newY = clamp(base.y + dy, 0, base.y + base.h - minH);
+      const newW = base.w + (base.x - newX);
+      const newH = base.h + (base.y - newY);
+      setRect({ x: newX, y: newY, w: newW, h: newH });
+      return;
+    }
+
+    if (dragMode === 'tr') {
+      const newY = clamp(base.y + dy, 0, base.y + base.h - minH);
+      const newW = clamp(base.w + dx, minW, canvasW - base.x);
+      const newH = base.h + (base.y - newY);
+      setRect({ x: base.x, y: newY, w: newW, h: newH });
+      return;
+    }
+
+    if (dragMode === 'bl') {
+      const newX = clamp(base.x + dx, 0, base.x + base.w - minW);
+      const newW = base.w + (base.x - newX);
+      const newH = clamp(base.h + dy, minH, canvasH - base.y);
+      setRect({ x: newX, y: base.y, w: newW, h: newH });
+      return;
+    }
+
+    if (dragMode === 'br') {
+      const newW = clamp(base.w + dx, minW, canvasW - base.x);
+      const newH = clamp(base.h + dy, minH, canvasH - base.y);
+      setRect({ x: base.x, y: base.y, w: newW, h: newH });
+      return;
+    }
   };
 
   const endDrag = () => {
@@ -218,7 +251,13 @@ const ImageResizer = ({ addPoints }: Props = {}) => {
     }
   };
 
-  const rectText = useMemo(() => `${Math.round(rect.w)} × ${Math.round(rect.h)}`, [rect.w, rect.h]);
+  const rectText = useMemo(() => {
+    const wPx = Math.round(rect.w);
+    const hPx = Math.round(rect.h);
+    const wCm = (rect.w / PX_PER_CM).toFixed(2);
+    const hCm = (rect.h / PX_PER_CM).toFixed(2);
+    return `${wPx} × ${hPx} px • ${wCm} × ${hCm} cm`;
+  }, [rect.w, rect.h]);
 
   if (!file) {
     return (
@@ -343,6 +382,15 @@ const ImageResizer = ({ addPoints }: Props = {}) => {
               }}
               onPointerDown={beginDrag('move')}
             >
+              <div className="absolute left-0 top-0 w-3 h-3 -translate-x-1/2 -translate-y-1/2 bg-white border-2 border-orange-500 rounded-sm cursor-nwse-resize"
+                onPointerDown={beginDrag('tl')} />
+              <div className="absolute right-0 top-0 w-3 h-3 translate-x-1/2 -translate-y-1/2 bg-white border-2 border-orange-500 rounded-sm cursor-nesw-resize"
+                onPointerDown={beginDrag('tr')} />
+              <div className="absolute left-0 bottom-0 w-3 h-3 -translate-x-1/2 translate-y-1/2 bg-white border-2 border-orange-500 rounded-sm cursor-nesw-resize"
+                onPointerDown={beginDrag('bl')} />
+              <div className="absolute right-0 bottom-0 w-3 h-3 translate-x-1/2 translate-y-1/2 bg-white border-2 border-orange-500 rounded-sm cursor-nwse-resize"
+                onPointerDown={beginDrag('br')} />
+
               <div
                 className="absolute left-0 top-0 w-full h-2 -translate-y-1/2 bg-orange-500/70 cursor-ns-resize"
                 onPointerDown={beginDrag('top')}

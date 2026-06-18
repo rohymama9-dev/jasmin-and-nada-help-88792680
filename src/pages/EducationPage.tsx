@@ -528,15 +528,20 @@ const EducationPage = ({ points, educationPoints, addPoints }: Props) => {
                 <p className="text-xs font-bold text-foreground">{t('بحث بالصورة (OCR)', 'Image-Based Search (OCR)')}</p>
                 <span className="text-[10px] text-muted-foreground font-semibold">{ocrLoading ? t('جاري OCR...', 'Running OCR...') : ''}</span>
               </div>
-              <label className={`relative flex items-center justify-center rounded-2xl border border-border bg-secondary/30 px-4 py-3 text-xs font-bold ${(!docText || docLoading) ? 'opacity-60 cursor-not-allowed' : 'cursor-pointer hover:bg-secondary/50'} transition-colors`}>
+              <label className="relative flex items-center justify-center rounded-2xl border border-border bg-secondary/30 px-4 py-3 text-xs font-bold cursor-pointer hover:bg-secondary/50 transition-colors">
                 <input
                   type="file"
                   accept="image/*"
-                  disabled={!docText || docLoading || ocrLoading}
+                  disabled={ocrLoading}
                   className="absolute inset-0 opacity-0 w-full h-full cursor-pointer disabled:cursor-not-allowed"
                   onChange={e => {
                     const f = e.target.files?.[0];
                     if (!f) return;
+                    if (!docText || docLoading) {
+                      toast.error(t('ارفعي المستند أولاً ثم ارفعي صورة الصفحة.', 'Upload the document first, then upload the page image.'));
+                      e.currentTarget.value = '';
+                      return;
+                    }
                     void runOcrSearch(f);
                     e.currentTarget.value = '';
                   }}

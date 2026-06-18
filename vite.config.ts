@@ -48,14 +48,14 @@ export default defineConfig({
         // Runtime caching for images — works for ALL sizes including large coloring images
         runtimeCaching: [
           {
-            // Cache all public assets and imported images (Coloring, Stickers, Exercises)
-            urlPattern: /\.(?:png|jpg|jpeg|gif|webp|svg|ico)$/i,
+            // Cache all images (local + external CDNs) so Quran images work offline
+            urlPattern: ({ request }) => request.destination === 'image',
             handler: 'CacheFirst',
             options: {
-              cacheName: 'images-cache-v2',
+              cacheName: 'images-cache-v3',
               expiration: {
-                maxEntries: 500,
-                maxAgeSeconds: 60 * 60 * 24 * 90, // 90 days
+                maxEntries: 5000,
+                maxAgeSeconds: 60 * 60 * 24 * 365 * 10, // 10 years
               },
               cacheableResponse: { statuses: [0, 200] },
             },
@@ -67,8 +67,8 @@ export default defineConfig({
             options: {
               cacheName: 'quran-text-cache-v1',
               expiration: {
-                maxEntries: 500,
-                maxAgeSeconds: 60 * 60 * 24 * 365, // 1 year
+                maxEntries: 5000,
+                maxAgeSeconds: 60 * 60 * 24 * 365 * 10, // 10 years
               },
               cacheableResponse: { statuses: [0, 200] },
             },
