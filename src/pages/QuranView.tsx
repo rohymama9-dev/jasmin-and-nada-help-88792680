@@ -140,7 +140,6 @@ const QuranView = () => {
             className="w-full h-full border-0"
             allow="autoplay; clipboard-write; fullscreen; accelerometer; gyroscope; picture-in-picture"
             referrerPolicy="no-referrer"
-            sandbox="allow-same-origin allow-scripts allow-forms allow-popups allow-presentation"
             loading="lazy"
           />
         ) : (

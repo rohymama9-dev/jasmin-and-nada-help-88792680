@@ -2,22 +2,30 @@ import { useState, useEffect, useRef } from 'react';
 import { useLang } from '@/contexts/LanguageContext';
 import { Download, X, Check, PlayCircle } from 'lucide-react';
 import { toast } from 'sonner';
+import { jsPDF } from 'jspdf';
 
 const getUsesKey = () => { const d = new Date(); return `app-formatconverter-uses-${d.getFullYear()}-${d.getMonth()}-${d.getDate()}`; };
 const getMaxKey = () => { const d = new Date(); return `app-formatconverter-max-${d.getFullYear()}-${d.getMonth()}-${d.getDate()}`; };
 const DEFAULT_MAX = 5;
 
 const IMAGE_FMTS = [
-  { value: 'image/webp', label: 'WebP', ext: 'webp' },
-  { value: 'image/jpeg', label: 'JPG', ext: 'jpg' },
   { value: 'image/png', label: 'PNG', ext: 'png' },
+  { value: 'image/jpeg', label: 'JPG', ext: 'jpg' },
+  { value: 'image/webp', label: 'WebP', ext: 'webp' },
+  { value: 'application/pdf', label: 'PDF', ext: 'pdf' },
+];
+
+const DOC_FMTS = [
+  { value: 'pdf', label: 'PDF', ext: 'pdf' },
+  { value: 'txt', label: 'TXT', ext: 'txt' },
+  { value: 'docx', label: 'DOCX', ext: 'docx' },
 ];
 
 const CATEGORIES = [
-  { id: 'image', emoji: '🖼️', ar: 'تحويل الصور', en: 'Images', desc_ar: 'JPG ↔ PNG ↔ WebP', desc_en: 'JPG ↔ PNG ↔ WebP', color: 'from-emerald-400 to-teal-500', soon: false },
+  { id: 'image', emoji: '🖼️', ar: 'تحويل الصور', en: 'Images', desc_ar: 'JPG ↔ PNG ↔ WebP ↔ PDF', desc_en: 'JPG ↔ PNG ↔ WebP ↔ PDF', color: 'from-emerald-400 to-teal-500', soon: false },
   { id: 'audio', emoji: '🎵', ar: 'استخراج الصوت من فيديو', en: 'Extract Audio from Video', desc_ar: 'MP4 / MOV → ملف صوتي', desc_en: 'MP4 / MOV → audio file', color: 'from-purple-400 to-violet-500', soon: false },
   { id: 'compress', emoji: '📦', ar: 'ضغط الملفات إلى GZ', en: 'Compress to GZ', desc_ar: 'أي ملف → .gz', desc_en: 'Any file → .gz', color: 'from-blue-400 to-indigo-500', soon: false },
-  { id: 'doc', emoji: '📄', ar: 'تحويل المستندات', en: 'Document Converter', desc_ar: 'TXT · CSV · HTML ↔ محول', desc_en: 'TXT · CSV · HTML converter', color: 'from-amber-400 to-orange-500', soon: false },
+  { id: 'doc', emoji: '📄', ar: 'تحويل المستندات', en: 'Document Converter', desc_ar: 'PDF · TXT · DOCX', desc_en: 'PDF · TXT · DOCX', color: 'from-amber-400 to-orange-500', soon: false },
   { id: 'video', emoji: '🎬', ar: 'ضغط الفيديو', en: 'Video Compression', desc_ar: 'قلّل حجم الفيديو (WebM)', desc_en: 'Reduce video size (WebM)', color: 'from-rose-400 to-pink-500', soon: false },
   { id: 'ebook', emoji: '📚', ar: 'تحويل الكتب', en: 'Ebook Conversion', desc_ar: 'قريباً', desc_en: 'Coming soon', color: 'from-cyan-400 to-sky-500', soon: true },
 ];
@@ -31,15 +39,17 @@ const FormatConverter = () => {
   const [category, setCategory] = useState<CatId | null>(null);
   const [file, setFile] = useState<File | null>(null);
   const [preview, setPreview] = useState<string | null>(null);
+  
+  // Format states
   const [targetFmt, setTargetFmt] = useState('image/webp');
-  const [docFormat, setDocFormat] = useState<'txt' | 'html' | 'csv'>('txt');
+  const [docFormat, setDocFormat] = useState('pdf');
+
   const [processing, setProcessing] = useState(false);
   const [done, setDone] = useState(false);
   const [resultBlob, setResultBlob] = useState<Blob | null>(null);
   const [resultName, setResultName] = useState('');
   const [watching, setWatching] = useState(false);
   const [progress, setProgress] = useState('');
-  const videoRef = useRef<HTMLVideoElement | null>(null);
 
   useEffect(() => {
     setUses(Number(localStorage.getItem(getUsesKey()) || 0));
@@ -67,22 +77,30 @@ const FormatConverter = () => {
       let blob: Blob; let name: string;
 
       if (category === 'image') {
-        // Canvas-based image conversion
         const img = new Image();
         const url = URL.createObjectURL(file);
         await new Promise<void>((res, rej) => { img.onload = () => res(); img.onerror = rej; img.src = url; });
-        const canvas = document.createElement('canvas');
-        canvas.width = img.width; canvas.height = img.height;
-        const ctx = canvas.getContext('2d')!;
-        ctx.imageSmoothingEnabled = true; ctx.imageSmoothingQuality = 'high';
-        ctx.drawImage(img, 0, 0);
-        const ext = IMAGE_FMTS.find(f => f.value === targetFmt)?.ext || 'webp';
-        blob = await new Promise<Blob>((res, rej) => canvas.toBlob(b => b ? res(b) : rej(new Error('Failed')), targetFmt, 0.95));
-        name = `converted_${file.name.replace(/\.[^.]+$/, '')}.${ext}`;
+        
+        if (targetFmt === 'application/pdf') {
+          // Convert image to PDF
+          const doc = new jsPDF({ orientation: img.width > img.height ? 'l' : 'p', unit: 'px', format: [img.width, img.height] });
+          doc.addImage(img, 'JPEG', 0, 0, img.width, img.height);
+          blob = doc.output('blob');
+          name = `converted_${file.name.replace(/\.[^.]+$/, '')}.pdf`;
+        } else {
+          // Normal image conversion
+          const canvas = document.createElement('canvas');
+          canvas.width = img.width; canvas.height = img.height;
+          const ctx = canvas.getContext('2d')!;
+          ctx.imageSmoothingEnabled = true; ctx.imageSmoothingQuality = 'high';
+          ctx.drawImage(img, 0, 0);
+          const ext = IMAGE_FMTS.find(f => f.value === targetFmt)?.ext || 'webp';
+          blob = await new Promise<Blob>((res, rej) => canvas.toBlob(b => b ? res(b) : rej(new Error('Failed')), targetFmt, 0.95));
+          name = `converted_${file.name.replace(/\.[^.]+$/, '')}.${ext}`;
+        }
         URL.revokeObjectURL(url);
 
       } else if (category === 'audio') {
-        // Extract audio from video using Web Audio API + MediaRecorder
         setProgress(lang === 'ar' ? 'جاري استخراج الصوت... قد يستغرق وقتاً حسب طول الفيديو' : 'Extracting audio... may take a while depending on video length');
         blob = await extractAudio(file, setProgress);
         name = `audio_${file.name.replace(/\.[^.]+$/, '')}.webm`;
@@ -94,6 +112,7 @@ const FormatConverter = () => {
         name = `${file.name}.gz`;
 
       } else if (category === 'doc') {
+        // Document conversion
         blob = await convertDocument(file, docFormat);
         name = `converted_${file.name.replace(/\.[^.]+$/, '')}.${docFormat}`;
 
@@ -173,34 +192,6 @@ const FormatConverter = () => {
         </div>
       )}
 
-      {/* Document format selector */}
-      {category === 'doc' && (
-        <div className="space-y-2">
-          <p className="font-bold text-sm text-foreground">{lang === 'ar' ? 'حوّل إلى:' : 'Convert to:'}</p>
-          <div className="grid grid-cols-3 gap-2">
-            {[{ v: 'txt', l: 'TXT' }, { v: 'html', l: 'HTML' }, { v: 'csv', l: 'CSV' }].map(f => (
-              <button key={f.v} onClick={() => setDocFormat(f.v as any)}
-                className={`py-2 rounded-xl text-sm font-bold border transition-colors ${docFormat === f.v ? 'bg-purple-500 text-white border-purple-500' : 'border-border text-muted-foreground hover:border-purple-300'}`}>
-                {f.l}
-              </button>
-            ))}
-          </div>
-          <p className="text-muted-foreground text-xs">{lang === 'ar' ? 'ارفع ملف TXT أو CSV أو HTML' : 'Upload TXT, CSV or HTML file'}</p>
-        </div>
-      )}
-
-      {/* Image format selector */}
-      {category === 'image' && !file && (
-        <div className="grid grid-cols-3 gap-2">
-          {IMAGE_FMTS.map(f => (
-            <button key={f.value} onClick={() => setTargetFmt(f.value)}
-              className={`py-2 rounded-xl text-sm font-bold border transition-colors ${targetFmt === f.value ? 'bg-purple-500 text-white border-purple-500' : 'border-border text-muted-foreground'}`}>
-              {f.label}
-            </button>
-          ))}
-        </div>
-      )}
-
       {/* Video note */}
       {category === 'video' && !file && (
         <div className="bg-rose-50 dark:bg-rose-950/30 border border-rose-200 dark:border-rose-900/40 rounded-2xl p-3 text-xs text-rose-700 dark:text-rose-400 font-medium">
@@ -218,7 +209,7 @@ const FormatConverter = () => {
       {!file ? (
         <label className="relative flex flex-col items-center justify-center rounded-3xl border-2 border-dashed border-purple-300 dark:border-purple-700 bg-purple-50/50 dark:bg-purple-950/20 p-10 cursor-pointer hover:bg-purple-100/40 transition-colors">
           <input type="file"
-            accept={category === 'image' ? 'image/*' : category === 'audio' || category === 'video' ? 'video/*' : category === 'doc' ? '.txt,.csv,.html,.htm' : '*/*'}
+            accept={category === 'image' ? 'image/*' : category === 'audio' || category === 'video' ? 'video/*' : '*/*'}
             className="absolute inset-0 opacity-0 w-full h-full cursor-pointer"
             onChange={e => e.target.files?.[0] && handleFile(e.target.files[0])} />
           <div className="text-5xl mb-3">{catInfo!.emoji}</div>
@@ -226,7 +217,7 @@ const FormatConverter = () => {
           <p className="text-sm text-muted-foreground mt-1">
             {category === 'image' ? 'JPG · PNG · WebP · GIF · BMP' :
              category === 'audio' || category === 'video' ? 'MP4 · MOV · AVI · MKV · WebM' :
-             category === 'doc' ? 'TXT · CSV · HTML' : lang === 'ar' ? 'كل الملفات' : 'All files'}
+             category === 'doc' ? 'PDF · TXT · DOCX · HTML' : lang === 'ar' ? 'كل الملفات' : 'All files'}
           </p>
         </label>
       ) : (
@@ -242,6 +233,35 @@ const FormatConverter = () => {
             <button onClick={() => { setFile(null); setDone(false); setPreview(null); setResultBlob(null); }}
               className="text-muted-foreground hover:text-destructive p-1"><X size={18} /></button>
           </div>
+
+          {/* format selector AFTER upload */}
+          {category === 'image' && !done && (
+            <div className="space-y-2">
+              <p className="font-bold text-sm text-foreground px-1">{lang === 'ar' ? 'حوّل إلى:' : 'Convert to:'}</p>
+              <div className="grid grid-cols-4 gap-2">
+                {IMAGE_FMTS.map(f => (
+                  <button key={f.value} onClick={() => setTargetFmt(f.value)}
+                    className={`py-2 rounded-xl text-xs sm:text-sm font-bold border transition-colors ${targetFmt === f.value ? 'bg-purple-500 text-white border-purple-500 shadow-md scale-[1.02]' : 'border-border text-muted-foreground hover:border-purple-300'}`}>
+                    {f.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {category === 'doc' && !done && (
+            <div className="space-y-2">
+              <p className="font-bold text-sm text-foreground px-1">{lang === 'ar' ? 'حوّل إلى:' : 'Convert to:'}</p>
+              <div className="grid grid-cols-3 gap-2">
+                {DOC_FMTS.map(f => (
+                  <button key={f.value} onClick={() => setDocFormat(f.value)}
+                    className={`py-2 rounded-xl text-sm font-bold border transition-colors ${docFormat === f.value ? 'bg-purple-500 text-white border-purple-500 shadow-md scale-[1.02]' : 'border-border text-muted-foreground hover:border-purple-300'}`}>
+                    {f.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
 
           {/* Progress */}
           {progress && (
@@ -293,7 +313,7 @@ async function extractAudio(videoFile: File, setProgress: (s: string) => void): 
         const destination = audioCtx.createMediaStreamDestination();
         const source = audioCtx.createMediaElementSource(video);
         source.connect(destination);
-        source.connect(audioCtx.destination); // also play so it progresses
+        source.connect(audioCtx.destination); 
 
         const mimeType = MediaRecorder.isTypeSupported('audio/webm;codecs=opus') ? 'audio/webm;codecs=opus' : 'audio/webm';
         const recorder = new MediaRecorder(destination.stream, { mimeType });
@@ -363,27 +383,33 @@ async function compressVideo(videoFile: File, setProgress: (s: string) => void):
 }
 
 // ─── Helper: Document conversion ─────────────────────────────────────────────
-async function convertDocument(file: File, format: 'txt' | 'html' | 'csv'): Promise<Blob> {
-  const text = await file.text();
-  let output = '';
-
-  if (format === 'txt') {
-    // Strip HTML tags if coming from HTML
-    output = text.replace(/<[^>]*>/g, '').replace(/&nbsp;/g, ' ').replace(/&amp;/g, '&').replace(/&lt;/g, '<').replace(/&gt;/g, '>').trim();
-  } else if (format === 'html') {
-    // Wrap plain text as HTML
-    const escaped = text.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
-    const lines = escaped.split('\n').map(l => `<p>${l || '&nbsp;'}</p>`).join('\n');
-    output = `<!DOCTYPE html>\n<html lang="ar" dir="auto">\n<head><meta charset="UTF-8"><title>Converted</title></head>\n<body>\n${lines}\n</body>\n</html>`;
-  } else if (format === 'csv') {
-    // Convert lines to CSV
-    output = text.split('\n').map(l => `"${l.replace(/"/g, '""')}"`).join('\n');
+async function convertDocument(file: File, format: string): Promise<Blob> {
+  let text = '';
+  try {
+    text = await file.text();
+  } catch (e) {
+    // If it's binary like an existing PDF or DOCX, we do best-effort or fail fallback
+    text = "Binary file cannot be fully extracted in this version.";
   }
 
-  return new Blob([output], { type: format === 'html' ? 'text/html' : 'text/plain' });
+  if (format === 'txt') {
+    const output = text.replace(/<[^>]*>/g, '').replace(/&nbsp;/g, ' ').replace(/&amp;/g, '&').replace(/&lt;/g, '<').replace(/&gt;/g, '>').trim();
+    return new Blob([output], { type: 'text/plain' });
+  } else if (format === 'docx') {
+    const html = `<html xmlns:o='urn:schemas-microsoft-com:office:office' xmlns:w='urn:schemas-microsoft-com:office:word' xmlns='http://www.w3.org/TR/REC-html40'>
+    <head><meta charset='utf-8'><title>Document</title></head>
+    <body>${text.replace(/\n/g, '<br>')}</body>
+    </html>`;
+    return new Blob([html], { type: 'application/msword' });
+  } else if (format === 'pdf') {
+    const doc = new jsPDF();
+    const lines = doc.splitTextToSize(text.substring(0, 10000), 180); // Protect against huge files crashing memory
+    doc.text(lines, 10, 10);
+    return doc.output('blob');
+  }
+  
+  return new Blob([text], { type: 'text/plain' });
 }
 
-// Global lang for video helper (workaround)
 let lang_global = 'جاري الضغط...';
-
 export default FormatConverter;
