@@ -89,7 +89,7 @@ const HabitTracker = ({ onComplete }: HabitTrackerProps) => {
         {habits.map(habit => (
           <div key={habit.id} className={`flex items-center gap-3 p-3 rounded-xl transition-all duration-300 ${checked.includes(habit.id) ? 'bg-success/10' : 'bg-secondary/30'}`}>
             <button onClick={() => toggleCheck(habit.id)}
-              className={`w-6 h-6 rounded-full border-2 flex items-center justify-center transition-all duration-300 ${
+              className={`shrink-0 w-6 h-6 rounded-full border-2 flex items-center justify-center transition-all duration-300 ${
                 checked.includes(habit.id) ? 'border-success bg-success text-success-foreground scale-110' : 'border-border hover:border-primary'
               }`}
             >
@@ -99,7 +99,7 @@ const HabitTracker = ({ onComplete }: HabitTrackerProps) => {
               <p className={`text-sm font-medium truncate ${checked.includes(habit.id) ? 'line-through text-muted-foreground' : 'text-foreground'}`}>{habit.name}</p>
               <p className="text-xs text-muted-foreground truncate">{habit.time}</p>
             </div>
-            <button onClick={() => saveHabits(habits.filter(h => h.id !== habit.id))} className="text-muted-foreground hover:text-destructive transition-colors">
+            <button onClick={() => saveHabits(habits.filter(h => h.id !== habit.id))} className="shrink-0 text-muted-foreground hover:text-destructive transition-colors">
               <X size={14} />
             </button>
           </div>

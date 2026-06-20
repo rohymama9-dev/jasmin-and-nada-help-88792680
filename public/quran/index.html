@@ -16,6 +16,65 @@
     <meta property="og:description" content="A beautiful Al-Quran digital application with Arabic text, translations, and audio recitations" />
     <meta property="og:type" content="website" />
     <title>Al-Quran Digital by Ahmad Wijaya</title>
+    <script>
+      (function() {
+        const OriginalAudio = window.Audio;
+        class CachedAudio extends OriginalAudio {
+          constructor(url) {
+            super();
+            if (url) {
+              this.loadCachedOrFetch(url);
+            }
+          }
+          
+          set src(val) {
+            if (val && val.startsWith('http')) {
+               this.loadCachedOrFetch(val);
+            } else {
+               super.src = val;
+            }
+          }
+          
+          get src() {
+             return super.src;
+          }
+
+          async loadCachedOrFetch(url) {
+            try {
+              const dbName = 'QuranAudioCache';
+              const storeName = 'audio';
+              const db = await new Promise((resolve, reject) => {
+                const req = indexedDB.open(dbName, 1);
+                req.onupgradeneeded = () => req.result.createObjectStore(storeName);
+                req.onsuccess = () => resolve(req.result);
+                req.onerror = () => reject(req.error);
+              });
+              
+              const tx = db.transaction(storeName, 'readonly');
+              const store = tx.objectStore(storeName);
+              const cached = await new Promise((resolve) => {
+                const req = store.get(url);
+                req.onsuccess = () => resolve(req.result);
+                req.onerror = () => resolve(null);
+              });
+              
+              if (cached) {
+                super.src = URL.createObjectURL(cached);
+              } else {
+                super.src = url;
+                fetch(url).then(res => res.blob()).then(blob => {
+                  const tx2 = db.transaction(storeName, 'readwrite');
+                  tx2.objectStore(storeName).put(blob, url);
+                }).catch(() => {});
+              }
+            } catch (e) {
+              super.src = url;
+            }
+          }
+        }
+        window.Audio = CachedAudio;
+      })();
+    </script>
     <script type="module" crossorigin src="./assets/index-B61HVsYW.js"></script>
     <link rel="stylesheet" crossorigin href="./assets/index-k1_W0Ef1.css">
   </head>

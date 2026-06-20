@@ -14,6 +14,7 @@ export default defineConfig({
     tsconfigPaths(),
     VitePWA({
       registerType: 'autoUpdate',
+      injectRegister: 'auto',
       includeAssets: ['favicon.ico', 'apple-touch-icon.png', '**/*.png', '**/*.jpg', '**/*.jpeg', '**/*.gif', '**/*.webp', '**/*.svg'],
       manifest: {
         name: "jasmin and nada help",
@@ -42,6 +43,9 @@ export default defineConfig({
         ]
       },
       workbox: {
+        cleanupOutdatedCaches: true,
+        clientsClaim: true,
+        skipWaiting: true,
         maximumFileSizeToCacheInBytes: 5 * 1024 * 1024, // 5MB for JS bundles
         globPatterns: ['**/*.{js,css,html,ico,woff,woff2,ttf,eot,svg,json}'],
         runtimeCaching: [

@@ -14,10 +14,10 @@ const LocalWeeklyLog = ({ logs, title, type }: { logs: any[]; title: string; typ
       <p className="text-xs font-bold text-muted-foreground mb-3 uppercase">{title}</p>
       <div className="flex gap-2 overflow-x-auto pb-2">
         {last7Days.map((log, i) => (
-          <div key={i} className="min-w-[60px] glass-card p-2 text-center rounded-lg">
+          <div key={i} className="min-w-[60px] shrink-0 glass-card p-2 text-center rounded-lg">
             <p className="text-[10px] text-muted-foreground">{log.date?.slice(5) || ''}</p>
             <p className="text-sm font-bold">
-              {type === 'water' ? `${log.amount || 0}L` : type === 'sleep' ? `${log.hours || 0}h` : type === 'exercise' ? `${log.duration || 0}m` : `${log.count || 0}`}
+              {type === 'water' ? `${log.amount || 0}L` : type === 'sleep' ? `${log.hours || 0}h` : type === 'exercise' ? `${Math.ceil((log.duration || 0) / 60)}m` : `${log.count || 0}`}
             </p>
           </div>
         ))}
