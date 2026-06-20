@@ -1,3 +1,4 @@
+import { toast } from 'sonner';
 import { useEffect, useRef, useState } from 'react';
 import { Mic, MicOff, Volume2, Check, X, Volume1, VolumeX } from 'lucide-react';
 import { useLang } from '@/contexts/LanguageContext';
@@ -52,7 +53,7 @@ const PronunciationExercise = ({ target, lang: lessonLang, onScore }: Props) => 
     setScore(null);
     const SR = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
     if (!SR) {
-      alert(lang === 'ar'
+      toast(lang === 'ar'
         ? 'المتصفح لا يدعم التعرف على الصوت. جرّبي Chrome.'
         : 'Speech recognition not supported. Try Chrome.');
       return;

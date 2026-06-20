@@ -95,9 +95,9 @@ const HabitTracker = ({ onComplete }: HabitTrackerProps) => {
             >
               {checked.includes(habit.id) && <Check size={12} />}
             </button>
-            <div className="flex-1">
-              <p className={`text-sm font-medium ${checked.includes(habit.id) ? 'line-through text-muted-foreground' : 'text-foreground'}`}>{habit.name}</p>
-              <p className="text-xs text-muted-foreground">{habit.time}</p>
+            <div className="flex-1 min-w-0">
+              <p className={`text-sm font-medium truncate ${checked.includes(habit.id) ? 'line-through text-muted-foreground' : 'text-foreground'}`}>{habit.name}</p>
+              <p className="text-xs text-muted-foreground truncate">{habit.time}</p>
             </div>
             <button onClick={() => saveHabits(habits.filter(h => h.id !== habit.id))} className="text-muted-foreground hover:text-destructive transition-colors">
               <X size={14} />

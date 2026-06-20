@@ -198,7 +198,12 @@ const DietTracker = ({ onPoints = () => {} }: { onPoints?: (n: number) => void }
         <Flame size={18} className="text-orange-500" />
         <h3 className="font-semibold text-foreground">{t('متتبع التغذية', 'Nutrition Tracker')}</h3>
         <button
-          onClick={() => { if (confirm(t('إعادة تعيين الملف الصحي؟', 'Reset health profile?'))) setProfile(null); }}
+          onClick={() => { 
+            toast(t('هل تريد تصفير بياناتك؟', 'Reset health profile?'), {
+              action: { label: t('تأكيد', 'Confirm'), onClick: () => setProfile(null) },
+              cancel: { label: t('إلغاء', 'Cancel') }
+            });
+          }}
           className="ms-auto text-[10px] text-muted-foreground hover:text-foreground">
           {t('تعديل', 'Edit')}
         </button>

@@ -1,3 +1,4 @@
+import { toast } from 'sonner';
 import { useEffect, useState } from 'react';
 import { ExternalLink, Trash2 } from 'lucide-react';
 import { useLang } from '@/contexts/LanguageContext';
@@ -48,10 +49,17 @@ const UploadedLibrary = ({ category, reloadKey = 0 }: Props) => {
 
   const handleDelete = async (item: UploadRow) => {
     if (!isAdmin || item.user_id !== uid) return;
-    if (!confirm(t('حذف هذا العنصر؟', 'Delete this item?'))) return;
-    await supabase.storage.from('admin-uploads').remove([item.storage_path]);
-    await (supabase as any).from('admin_uploads').delete().eq('id', item.id);
-    setItems(prev => prev.filter(i => i.id !== item.id));
+    toast(t('حذف هذا العنصر؟', 'Delete this item?'), {
+      action: {
+        label: t('تأكيد', 'Confirm'),
+        onClick: async () => {
+          await supabase.storage.from('admin-uploads').remove([item.storage_path]);
+          await (supabase as any).from('admin_uploads').delete().eq('id', item.id);
+          setItems(prev => prev.filter(i => i.id !== item.id));
+        }
+      },
+      cancel: { label: t('إلغاء', 'Cancel') }
+    });
   };
 
   if (items.length === 0) return null;

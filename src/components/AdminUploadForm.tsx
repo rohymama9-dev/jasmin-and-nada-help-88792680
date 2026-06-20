@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { Upload, FileText, Sticker, Palette, Trash2, ExternalLink, Lock } from 'lucide-react';
 import { useLang } from '@/contexts/LanguageContext';
 import { supabase } from '@/integrations/supabase/client';
-import { toast } from '@/hooks/use-toast';
+import { toast } from 'sonner';
 
 type Category = 'summary' | 'sticker' | 'coloring';
 
@@ -47,9 +47,9 @@ const AdminUploadForm = () => {
   const handleAuth = () => {
     if (authEmail.trim().toLowerCase() === ADMIN_EMAIL) {
       setIsAuthorized(true);
-      toast({ title: t('تم التحقق بنجاح ✅', 'Verification successful ✅') });
+      toast.success(t('تم التحقق بنجاح ✅', 'Verification successful ✅'));
     } else {
-      toast({ title: t('البريد غير مصرح له ❌', 'Unauthorized email ❌'), variant: 'destructive' });
+      toast.error(t('البريد غير مصرح له ❌', 'Unauthorized email ❌'));
     }
   };
 
@@ -64,11 +64,11 @@ const AdminUploadForm = () => {
 
   const handleUpload = async () => {
     if (!file || !title.trim()) {
-      toast({ title: t('الرجاء إكمال البيانات', 'Please complete the form'), variant: 'destructive' });
+      toast.error(t('الرجاء إكمال البيانات', 'Please complete the form'));
       return;
     }
     if (!uid) {
-      toast({ title: t('يجب تسجيل الدخول', 'You must be signed in'), variant: 'destructive' });
+      toast.error(t('يجب تسجيل الدخول', 'You must be signed in'));
       return;
     }
     setUploading(true);
@@ -93,11 +93,11 @@ const AdminUploadForm = () => {
       });
       if (insErr) throw insErr;
 
-      toast({ title: t('تم النشر! 🎉', 'Published! 🎉') });
+      toast.success(t('تم النشر! 🎉', 'Published! 🎉'));
       setTitle(''); setFile(null);
       refresh();
     } catch (e: any) {
-      toast({ title: e.message || t('فشل الرفع', 'Upload failed'), variant: 'destructive' });
+      toast.error(e.message || t('فشل الرفع', 'Upload failed'));
     } finally {
       setUploading(false);
     }
@@ -105,10 +105,17 @@ const AdminUploadForm = () => {
 
   const handleDelete = async (item: UploadRow) => {
     if (item.user_id !== uid) return;
-    if (!confirm(t('حذف هذا العنصر؟', 'Delete this item?'))) return;
-    await supabase.storage.from('admin-uploads').remove([item.storage_path]);
-    await (supabase as any).from('admin_uploads').delete().eq('id', item.id);
-    refresh();
+    toast(t('حذف هذا العنصر؟', 'Delete this item?'), {
+      action: {
+        label: t('تأكيد', 'Confirm'),
+        onClick: async () => {
+          await supabase.storage.from('admin-uploads').remove([item.storage_path]);
+          await (supabase as any).from('admin_uploads').delete().eq('id', item.id);
+          refresh();
+        }
+      },
+      cancel: { label: t('إلغاء', 'Cancel') }
+    });
   };
 
   const filtered = items.filter(i => filter === 'all' || i.category === filter);

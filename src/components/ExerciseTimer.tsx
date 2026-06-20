@@ -1,3 +1,4 @@
+import { toast } from 'sonner';
 import { useEffect, useState, useRef } from 'react';
 import { Play, Pause, X, CheckCircle } from 'lucide-react';
 import { useLang } from '@/contexts/LanguageContext';
@@ -152,7 +153,7 @@ const ExerciseTimer = () => {
     if (auto) try { localStorage.setItem('exercise_completed', 'true'); } catch {};
     if (auto) {
       beep();
-      alert(lang === 'ar' ? 'انتهى التمرين 🎉' : 'Exercise complete 🎉');
+      toast(lang === 'ar' ? 'انتهى التمرين 🎉' : 'Exercise complete 🎉');
     }
     setSecondsElapsed(0);
     setSecondsLeft(minutes * 60);

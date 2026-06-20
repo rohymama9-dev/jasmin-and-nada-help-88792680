@@ -1,3 +1,4 @@
+import { toast } from 'sonner';
 import React, { useState } from 'react';
 import { Minus, Plus, ChevronDown, ChevronUp, Send, Loader2, AlertTriangle } from 'lucide-react';
 
@@ -15,13 +16,13 @@ const REGULAR_SERVICES = [
 ];
 
 const OFFER_SERVICES = [
-  { id: 'offer_img', arName: 'تعديل صورتين بالذكاء الاصطناعي مع دمجهم مع الصور القديمةوتحسين جودتهم', enName: 'AI Image Editing (2 images)', price: '$3', arPrice: '$3 بدل $5', enPrice: '$3 instead of $5' },
+  { id: 'offer_img', arName: 'تعديل صورتين بالذكاء الاصطناعي مع دمجهم مع الصور القديمة وتحسين جودتهم', enName: 'AI Image Editing (2 images)', price: '$3', arPrice: '$3 بدل $5', enPrice: '$3 instead of $5' },
   { id: 'offer_pdf', arName: 'تحويل ملفين Word/PDF',            enName: 'Word/PDF Conversion (2 files)', price: '$3', arPrice: '$3 بدل $5', enPrice: '$3 instead of $5' },
   { id: 'offer_bg10', arName: 'إزالة خلفية 10 صور مع تحسين جودتهم مع اضافتهم للقديمه وعدم عرضهم في معرض صوري', enName: 'Remove BG & upscale 10 images (Private)', price: '$10' },
-  { id: 'offer_vid_compress3', arName: 'باقة ضغط 3 فيديوهات بـ 15 دولار بدلاً من 30', enName: 'Compress 3 videos bundle', price: '$15', arPrice: '15 دولار بدلاً من 30', enPrice: '$15 instead of $30' },
-  { id: 'offer_mp4_to_mp3', arName: 'باقة تحويل فيديو إلى صوت (MP4 to MP3) بـ 20 دولار', enName: 'MP4 to MP3 conversion', price: '$20', arPrice: '20 دولار', enPrice: '$20' },
-  { id: 'offer_hide_gallery', arName: 'عرض الخصم الهائل: عدم عرض الصور في معرضي الخاص بـ 3 دولار بدلاً من 20 دولار', enName: 'Hide photos from private gallery', price: '$3', arPrice: '3 دولار بدلاً من 20 دولار', enPrice: '$3 instead of $20' },
-  { id: 'offer_restore_10', arName: 'باقة ترميم 10 صور وتحسين اللون والجودة بـ 15 دولار بدلاً من 30', enName: 'Restore 10 images bundle', price: '$15', arPrice: '15 دولار بدلاً من 30', enPrice: '$15 instead of $30' },
+  { id: 'offer_vid_compress3', arName: 'باقة ضغط 3 فيديوهات', enName: 'Compress 3 videos bundle', price: '$15', arPrice: '15 دولار بدلاً من 30', enPrice: '$15 instead of $30' },
+  { id: 'offer_mp4_to_mp3', arName: 'باقة تحويل فيديو إلى صوت (MP4 to MP3)', enName: 'MP4 to MP3 conversion', price: '$20', arPrice: '20 دولار', enPrice: '$20' },
+  { id: 'offer_hide_gallery', arName: 'عرض الخصم الهائل: عدم عرض الصور في معرضي الخاص', enName: 'Hide photos from private gallery', price: '$3', arPrice: '3 دولار بدلاً من 20 دولار', enPrice: '$3 instead of $20' },
+  { id: 'offer_restore_10', arName: 'باقة ترميم وتلوين الصور', enName: 'Restore 10 images bundle', price: '$15', arPrice: '15 دولار بدلاً من 30', enPrice: '$15 instead of $30' },
 ];
 
 export default function CombinedOrderForm({ onClose, lang, hideOffers }: { onClose: () => void; lang: string; hideOffers?: boolean }) {
@@ -41,11 +42,11 @@ export default function CombinedOrderForm({ onClose, lang, hideOffers }: { onClo
       .map(s => `${lang === 'ar' ? s.arName : s.enName} x${quantities[s.id]} (${s.price})`);
 
     if (chosen.length === 0) {
-      alert(lang === 'ar' ? 'الرجاء اختيار خدمة واحدة على الأقل' : 'Please select at least one service');
+      toast.error(lang === 'ar' ? 'الرجاء اختيار خدمة واحدة على الأقل' : 'Please select at least one service');
       return;
     }
     if (!clientPhone.trim()) {
-      alert(lang === 'ar' ? 'الرجاء إدخال رقم التواصل' : 'Please enter contact info');
+      toast.error(lang === 'ar' ? 'الرجاء إدخال رقم التواصل' : 'Please enter contact info');
       return;
     }
 
@@ -60,13 +61,13 @@ export default function CombinedOrderForm({ onClose, lang, hideOffers }: { onClo
         `📝 Details: ${details || '—'}`;
       const { supabase } = await import('@/integrations/supabase/client');
       await supabase.functions.invoke('send-telegram', { body: { message } });
-      alert(lang === 'ar'
+      toast.success(lang === 'ar'
         ? 'تم إرسال طلبك بنجاح! سنتواصل معك قريباً'
         : 'Your order was sent successfully! We will contact you soon.');
       onClose();
     } catch (e) {
       console.error(e);
-      alert(lang === 'ar' ? 'فشل الإرسال' : 'Failed to send');
+      toast.error(lang === 'ar' ? 'فشل الإرسال' : 'Failed to send');
     } finally { setSending(false); }
   };
 

@@ -1,10 +1,12 @@
-import { Outlet, Link, createRootRoute } from "@tanstack/react-router";
+import { Outlet, Link, createRootRoute, useRouterState } from "@tanstack/react-router";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { motion, AnimatePresence } from "framer-motion";
 import { useEffect, useState } from "react";
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { initDailyVisitTracker } from "@/lib/dailyVisit";
+import { useLocalNotifications } from "@/hooks/useNotifications";
 
 function NotFoundComponent() {
   return (
@@ -35,13 +37,27 @@ export const Route = createRootRoute({
 
 function RootComponent() {
   const [queryClient] = useState(() => new QueryClient());
+  useLocalNotifications();
   useEffect(() => { initDailyVisitTracker(); }, []);
+  const routerState = useRouterState();
+
   return (
     <QueryClientProvider client={queryClient}>
       <TooltipProvider>
         <Toaster />
         <Sonner />
-        <Outlet />
+        <AnimatePresence mode="wait">
+          <motion.div
+            key={routerState.location.pathname}
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -10 }}
+            transition={{ duration: 0.2 }}
+            className="w-full min-h-[100dvh]"
+          >
+            <Outlet />
+          </motion.div>
+        </AnimatePresence>
       </TooltipProvider>
     </QueryClientProvider>
   );

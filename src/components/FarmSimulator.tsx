@@ -86,12 +86,12 @@ const WORLD_ASSETS = {
   }
 };
 
-const getSeeds = (w: World) => WORLD_ASSETS[w].seeds;
-const getFlowers = (w: World) => WORLD_ASSETS[w].flowers;
+const getSeeds = (w: World) => WORLD_ASSETS[w]?.seeds || [];
+const getFlowers = (w: World) => WORLD_ASSETS[w]?.flowers || [];
 type Seed = ReturnType<typeof getSeeds>[number];
 type Flower = ReturnType<typeof getFlowers>[number];
-const getAnimals = (w: World) => WORLD_ASSETS[w].animals;
-const getTrees = (w: World) => WORLD_ASSETS[w].trees;
+const getAnimals = (w: World) => WORLD_ASSETS[w]?.animals || [];
+const getTrees = (w: World) => WORLD_ASSETS[w]?.trees || [];
 
 const FLOWER_COST = 5;
 const FLOWER_BLOOM_MS = 120000; // 2 minutes

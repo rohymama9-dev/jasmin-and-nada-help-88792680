@@ -1,3 +1,4 @@
+import { toast } from 'sonner';
 import { useState, useRef, useEffect } from 'react';
 import { Mic, MicOff, ArrowLeft, ArrowRight, BookOpen } from 'lucide-react';
 import { useLang } from '@/contexts/LanguageContext';
@@ -35,7 +36,7 @@ const RecitationRoom = ({ surah, fromAyah, toAyah, onBack, onPoints }: Recitatio
     const SpeechRecognition =
       (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
     if (!SpeechRecognition) {
-      alert(lang === 'ar'
+      toast(lang === 'ar'
         ? 'المتصفح لا يدعم التعرف على الصوت. جرّبي Chrome على أندرويد.'
         : 'Browser does not support Speech Recognition. Try Chrome on Android.');
       return;
@@ -49,7 +50,7 @@ const RecitationRoom = ({ surah, fromAyah, toAyah, onBack, onPoints }: Recitatio
         s.getTracks().forEach(t => t.stop());
       }
     } catch {
-      alert(lang === 'ar'
+      toast(lang === 'ar'
         ? 'يرجى السماح بالوصول إلى الميكروفون من إعدادات المتصفح.'
         : 'Please allow microphone access from browser settings.');
       return;
@@ -72,13 +73,13 @@ const RecitationRoom = ({ surah, fromAyah, toAyah, onBack, onPoints }: Recitatio
       setIsListening(false);
       const err = e?.error;
       if (err === 'not-allowed' || err === 'service-not-allowed') {
-        alert(lang === 'ar'
+        toast(lang === 'ar'
           ? 'تم رفض الإذن للميكروفون. فعّليه من إعدادات المتصفح.'
           : 'Microphone permission denied. Enable it in browser settings.');
       } else if (err === 'no-speech') {
         // silently ignore — user can tap again
       } else if (err === 'audio-capture') {
-        alert(lang === 'ar' ? 'لم يتم العثور على ميكروفون.' : 'No microphone found.');
+        toast(lang === 'ar' ? 'لم يتم العثور على ميكروفون.' : 'No microphone found.');
       }
     };
     recognition.onend = () => setIsListening(false);

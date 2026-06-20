@@ -242,12 +242,12 @@ const WaterTracker = ({ onDrink }: WaterTrackerProps) => {
           <p className="text-xs font-medium text-muted-foreground uppercase">{lang === 'ar' ? 'سجل الأسبوع' : 'Weekly Record'}</p>
           <div className="space-y-2 max-h-48 overflow-y-auto pr-1">
             {groupedEntries.map(([date, data]: [string, any]) => (
-              <div key={date} className="glass-card rounded-lg p-3 text-sm flex justify-between items-center">
-                <div className="flex flex-col">
-                  <span className="font-bold text-foreground">{date}</span>
-                  <span className="text-[10px] text-muted-foreground">{data.cups} {lang === 'ar' ? 'أكواب' : 'cups'} — {data.ml >= 1000 ? (data.ml / 1000).toFixed(1) + ' L' : data.ml + ' ml'}</span>
+              <div key={date} className="glass-card rounded-lg p-3 text-sm flex justify-between items-center gap-2">
+                <div className="flex flex-col min-w-0 flex-1">
+                  <span className="font-bold text-foreground truncate">{date}</span>
+                  <span className="text-[10px] text-muted-foreground truncate">{data.cups} {lang === 'ar' ? 'أكواب' : 'cups'} — {data.ml >= 1000 ? (data.ml / 1000).toFixed(1) + ' L' : data.ml + ' ml'}</span>
                 </div>
-                <div className="text-right flex flex-col">
+                <div className="text-right flex flex-col shrink-0">
                   <span className="text-xs text-muted-foreground">{lang === 'ar' ? 'آخر شربة' : 'Last Drink'}</span>
                   <span className="font-bold text-foreground text-accent">{data.lastTime}</span>
                 </div>

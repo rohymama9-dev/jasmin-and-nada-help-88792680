@@ -169,11 +169,17 @@ const MedicationReminder = () => {
   };
 
   const removeMed = (id: string) => {
-    if (confirm(lang === 'ar' ? 'هل تريد حذف هذا الدواء نهائياً؟' : 'Delete this medicine permanently?')) {
-      saveMeds(meds.filter(m => m.id !== id));
-      saveChecked(checked.filter(c => c !== id));
-      toast.error(lang === 'ar' ? 'تم الحذف' : 'Removed');
-    }
+    toast(lang === 'ar' ? 'هل أنت متأكد من حذف هذا الدواء؟' : 'Delete this medicine permanently?', {
+      action: {
+        label: lang === 'ar' ? 'تأكيد' : 'Confirm',
+        onClick: () => {
+          saveMeds(meds.filter(m => m.id !== id));
+          saveChecked(checked.filter(c => c !== id));
+          toast.error(lang === 'ar' ? 'تم الحذف' : 'Removed');
+        }
+      },
+      cancel: { label: lang === 'ar' ? 'إلغاء' : 'Cancel' }
+    });
   };
 
   const t = (ar: string, en: string) => (lang === 'ar' ? ar : en);

@@ -134,19 +134,25 @@ const SleepTracker = ({ onPoints = () => {} }: SleepTrackerProps) => {
   };
 
   const resetToday = () => {
-    if (confirm(lang === 'ar' ? 'إعادة تعيين اليوم؟' : 'Reset today?')) {
-      setSleepTime('23:00');
-      setWakeTime('07:00');
-      try {
-        const all = readWeeklyObject<SleepRecord>(SLEEP_KEY);
-        delete all[today];
-        localStorage.setItem(SLEEP_KEY, JSON.stringify(all));
-        setWeeklyRecords(all);
-      } catch {
-        /* ignore */
-      }
-      toast.success(lang === 'ar' ? 'تم إعادة التعيين' : 'Reset complete');
-    }
+    toast(lang === 'ar' ? 'إعادة تعيين اليوم؟' : 'Reset today?', {
+      action: {
+        label: lang === 'ar' ? 'تأكيد' : 'Confirm',
+        onClick: () => {
+          setSleepTime('23:00');
+          setWakeTime('07:00');
+          try {
+            const all = readWeeklyObject<SleepRecord>(SLEEP_KEY);
+            delete all[today];
+            localStorage.setItem(SLEEP_KEY, JSON.stringify(all));
+            setWeeklyRecords(all);
+          } catch {
+            /* ignore */
+          }
+          toast.success(lang === 'ar' ? 'تم إعادة التعيين' : 'Reset complete');
+        }
+      },
+      cancel: { label: lang === 'ar' ? 'إلغاء' : 'Cancel' }
+    });
   };
 
   const hours = calculateSleepHours(sleepTime, wakeTime);

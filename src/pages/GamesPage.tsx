@@ -1,3 +1,4 @@
+import { toast } from 'sonner';
 import { useState } from 'react';
 import { Gamepad2 } from 'lucide-react';
 import { useLang } from '@/contexts/LanguageContext';
@@ -200,7 +201,7 @@ const GamesPage = ({ points, gamePoints, addPoints }: GamesPageProps) => {
 
   const handleUnlock = () => {
     if (points < 20) {
-      alert(lang === 'ar' ? 'تحتاجين إلى ٢٠ نقطة على الأقل لفتح الألعاب' : 'Need at least 20 points to unlock games');
+      toast(lang === 'ar' ? 'تحتاجين إلى ٢٠ نقطة على الأقل لفتح الألعاب' : 'Need at least 20 points to unlock games');
       return;
     }
     addPoints(-20);

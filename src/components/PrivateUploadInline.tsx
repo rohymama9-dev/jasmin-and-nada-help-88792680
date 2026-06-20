@@ -3,7 +3,7 @@ import { Lock, Upload, ChevronDown, ChevronUp, Trash2, Download, FileText } from
 import { useLang } from '@/contexts/LanguageContext';
 import { supabase } from '@/integrations/supabase/client';
 import { requireGoogle } from '@/lib/requireGoogle';
-import { toast } from '@/hooks/use-toast';
+import { toast } from 'sonner';
 
 interface PrivateUploadInlineProps {
   /** Bucket-key written into private_uploads.category (e.g. 'sticker', 'coloring') */
@@ -98,7 +98,7 @@ const PrivateUploadInline = ({ category, accept, labelAr, labelEn }: PrivateUplo
       return;
     }
     if (!file || !title.trim()) {
-      toast({ title: t('أكملي البيانات', 'Complete the form'), variant: 'destructive' });
+      toast.error(t('أكملي البيانات', 'Complete the form'));
       return;
     }
     setBusy(true);
@@ -122,23 +122,30 @@ const PrivateUploadInline = ({ category, accept, labelAr, labelEn }: PrivateUplo
       });
       if (insErr) throw insErr;
 
-      toast({ title: t('تم الحفظ بشكل خاص 🔒', 'Saved privately 🔒') });
+      toast.success(t('تم الحفظ بشكل خاص 🔒', 'Saved privately 🔒'));
       setTitle('');
       setFile(null);
       refresh();
     } catch (e: unknown) {
       const msg = e instanceof Error ? e.message : t('فشل الرفع', 'Upload failed');
-      toast({ title: msg, variant: 'destructive' });
+      toast.error(msg);
     } finally {
       setBusy(false);
     }
   };
 
   const handleDelete = async (item: Item) => {
-    if (!confirm(t('حذف هذا الملف؟', 'Delete this file?'))) return;
-    await supabase.storage.from('private-uploads').remove([item.storage_path]);
-    await (supabase as any).from('private_uploads').delete().eq('id', item.id);
-    refresh();
+    toast(t('حذف هذا الملف؟', 'Delete this file?'), {
+      action: {
+        label: t('تأكيد', 'Confirm'),
+        onClick: async () => {
+          await supabase.storage.from('private-uploads').remove([item.storage_path]);
+          await (supabase as any).from('private_uploads').delete().eq('id', item.id);
+          refresh();
+        }
+      },
+      cancel: { label: t('إلغاء', 'Cancel') }
+    });
   };
 
   return (

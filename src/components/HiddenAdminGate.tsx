@@ -1,3 +1,4 @@
+import { toast } from 'sonner';
 import { useEffect, useRef, useState, ReactNode } from 'react';
 
 /**
@@ -31,7 +32,7 @@ const HiddenAdminGate = ({ children, hint = '·' }: Props) => {
       sessionStorage.setItem(SESSION_KEY, '1');
       setUnlocked(true);
     } else if (v !== null) {
-      window.alert('❌');
+      window.toast('❌');
     }
   };
 

@@ -332,14 +332,20 @@ const ExercisesPage = ({ points = 0, addPoints = () => {}, onBack = () => {} }: 
                 {categoryImages[selectedCategory.id] && (
                   <button
                     onClick={async () => {
-                      if (confirm(t('هل أنت متأكد من حذف هذا البروتوكول والعودة للصورة الافتراضية؟', 'Are you sure you want to delete this protocol and return to default?'))) {
-                        const nextImages = { ...categoryImages };
-                        delete nextImages[selectedCategory.id];
-                        setCategoryImages(nextImages);
-                        await persistImages(nextImages);
-                        toast.success(t('تم الحذف بنجاح', 'Deleted successfully'));
-                        setIsAdminMode(false);
-                      }
+                      toast(t('هل أنت متأكد من حذف هذا البروتوكول والعودة للصورة الافتراضية؟', 'Are you sure you want to delete this protocol and return to default?'), {
+                        action: {
+                          label: t('تأكيد', 'Confirm'),
+                          onClick: async () => {
+                            const nextImages = { ...categoryImages };
+                            delete nextImages[selectedCategory.id];
+                            setCategoryImages(nextImages);
+                            await persistImages(nextImages);
+                            toast.success(t('تم الحذف بنجاح', 'Deleted successfully'));
+                            setIsAdminMode(false);
+                          }
+                        },
+                        cancel: { label: t('إلغاء', 'Cancel') }
+                      });
                     }}
                     className="p-5 rounded-2xl bg-destructive/60 backdrop-blur-md text-white hover:bg-destructive/80 transition-all flex flex-col items-center gap-2"
                   >

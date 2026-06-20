@@ -98,8 +98,8 @@ const ServicesPage = ({ points, addPoints }: ServicesPageProps) => {
         case 'quiz': return <QuizEngine onScore={addPoints} />;
         case 'personalityquizzes': return <PersonalityQuizzes />;
         case 'contact': return <CombinedOrderForm onClose={() => setActiveService(null)} lang={lang} hideOffers={true} />;
-        case 'compressor': return <FileCompressor />;
-        case 'converter': return <FormatConverter />;
+        case 'compressor': return <FileCompressor points={points} addPoints={addPoints} />;
+        case 'converter': return <FormatConverter points={points} addPoints={addPoints} />;
         case 'resizer': return <ImageResizer points={points} addPoints={addPoints} />;
         case 'currency': return <CurrencyConverter />;
         default: return null;

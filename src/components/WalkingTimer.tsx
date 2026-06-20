@@ -144,13 +144,19 @@ const WalkingTimer = ({ onPoints = () => {} }: WalkingTimerProps) => {
   };
 
   const resetToday = () => {
-    if (confirm(lang === 'ar' ? 'إعادة تعيين اليوم؟' : 'Reset today?')) {
-      setIsRunning(false);
-      try { localStorage.removeItem(STORAGE_KEY); } catch {}
-      setElapsed(0);
-      saveData({ date: today, duration: 0, calories: 0, pointsAwarded: 0 });
-      toast.success(lang === 'ar' ? 'تم إعادة التعيين' : 'Reset complete');
-    }
+    toast(lang === 'ar' ? 'إعادة تعيين اليوم؟' : 'Reset today?', {
+      action: {
+        label: lang === 'ar' ? 'تأكيد' : 'Confirm',
+        onClick: () => {
+          setIsRunning(false);
+          try { localStorage.removeItem(STORAGE_KEY); } catch {}
+          setElapsed(0);
+          saveData({ date: today, duration: 0, calories: 0, pointsAwarded: 0 });
+          toast.success(lang === 'ar' ? 'تم إعادة التعيين' : 'Reset complete');
+        }
+      },
+      cancel: { label: lang === 'ar' ? 'إلغاء' : 'Cancel' }
+    });
   };
 
   const totalMinutes = Math.floor(data.duration / 60);
@@ -210,7 +216,7 @@ const WalkingTimer = ({ onPoints = () => {} }: WalkingTimerProps) => {
             </button>
           ) : isRunning ? (
             <>
-              <button onClick={() => setIsRunning(false)} className="flex-1 py-3 rounded-xl bg-secondary text-secondary-foreground font-medium flex items-center justify-center gap-2 active:scale-95 transition">
+              <button onClick={() => { setIsRunning(false); try { localStorage.removeItem(STORAGE_KEY); } catch {} }} className="flex-1 py-3 rounded-xl bg-secondary text-secondary-foreground font-medium flex items-center justify-center gap-2 active:scale-95 transition">
                 <Pause size={18} />
                 {lang === 'ar' ? 'إيقاف' : 'Pause'}
               </button>
