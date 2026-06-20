@@ -1,6 +1,6 @@
 import { useState, useRef } from 'react';
 import { useLang } from '@/contexts/LanguageContext';
-import { Download, X, Check, Lock, PlayCircle, Image as ImageIcon, Music, FileText } from 'lucide-react';
+import { Download, X, Check, Image as ImageIcon, Music, FileText } from 'lucide-react';
 import { toast } from 'sonner';
 import { jsPDF } from 'jspdf';
 
@@ -28,10 +28,7 @@ type CatId = 'image' | 'audio' | 'doc';
 const FormatConverter = () => {
   const { lang } = useLang();
   
-  // Points & Unlock logic
-  const [points, setPoints] = useState(() => parseInt(localStorage.getItem('points') || '100'));
-  const [isUnlocked, setIsUnlocked] = useState(() => localStorage.getItem('converterUnlocked') === 'true');
-  const UNLOCK_COST = 80;
+  // Access is controlled by ServicesPage — no internal unlock needed
 
   const [category, setCategory] = useState<CatId | null>(null);
   const [file, setFile] = useState<File | null>(null);
@@ -45,19 +42,6 @@ const FormatConverter = () => {
   const [resultBlob, setResultBlob] = useState<Blob | null>(null);
   const [resultName, setResultName] = useState('');
   const [progress, setProgress] = useState('');
-
-  const handleUnlock = () => {
-    if (points >= UNLOCK_COST) {
-      const newPoints = points - UNLOCK_COST;
-      setPoints(newPoints);
-      localStorage.setItem('points', newPoints.toString());
-      localStorage.setItem('converterUnlocked', 'true');
-      setIsUnlocked(true);
-      toast.success(lang === 'ar' ? 'تم فك القفل بنجاح!' : 'Unlocked successfully!');
-    } else {
-      toast.error(lang === 'ar' ? 'نقاطك غير كافية!' : 'Not enough points!');
-    }
-  };
 
   const handleFile = (f: File) => {
     if (preview) URL.revokeObjectURL(preview);
@@ -97,52 +81,140 @@ const FormatConverter = () => {
         }
         URL.revokeObjectURL(url);
       } else if (category === 'audio') {
-        const audioCtx = new AudioContext();
-        const arrayBuffer = await file.arrayBuffer();
-        const audioBuffer = await audioCtx.decodeAudioData(arrayBuffer);
-        
-        const offlineCtx = new OfflineAudioContext(audioBuffer.numberOfChannels, audioBuffer.length, audioBuffer.sampleRate);
-        const source = offlineCtx.createBufferSource();
-        source.buffer = audioBuffer;
-        source.connect(offlineCtx.destination);
-        source.start();
-        const renderedBuffer = await offlineCtx.startRendering();
-        
-        // Convert to WAV
-        const length = renderedBuffer.length * renderedBuffer.numberOfChannels * 2 + 44;
-        const out = new ArrayBuffer(length);
-        const view = new DataView(out);
-        const writeString = (pos: number, str: string) => { for (let i = 0; i < str.length; i++) view.setUint8(pos + i, str.charCodeAt(i)); };
-        
-        writeString(0, 'RIFF'); view.setUint32(4, 36 + renderedBuffer.length * 2, true); writeString(8, 'WAVE'); writeString(12, 'fmt ');
-        view.setUint32(16, 16, true); view.setUint16(20, 1, true); view.setUint16(22, renderedBuffer.numberOfChannels, true);
-        view.setUint32(24, renderedBuffer.sampleRate, true); view.setUint32(28, renderedBuffer.sampleRate * 4, true);
-        view.setUint16(32, renderedBuffer.numberOfChannels * 2, true); view.setUint16(34, 16, true); writeString(36, 'data');
-        view.setUint32(40, renderedBuffer.length * 2, true);
-        
-        const channelData = renderedBuffer.getChannelData(0);
-        let offset = 44;
-        for (let i = 0; i < channelData.length; i++) {
-          let s = Math.max(-1, Math.min(1, channelData[i]));
-          view.setInt16(offset, s < 0 ? s * 0x8000 : s * 0x7FFF, true);
-          offset += 2;
-        }
-        
-        blob = new Blob([out], { type: 'audio/wav' });
-        name = `extracted_audio.wav`;
+        // STRICT: FileReader → ArrayBuffer → decodeAudioData → OfflineAudioContext → WAV Blob
+        // No MediaRecorder. No fallback that silences the file.
+        await new Promise<void>((resolve, reject) => {
+          const reader = new FileReader();
+          reader.onload = async (e) => {
+            try {
+              const arrayBuffer = e.target!.result as ArrayBuffer;
+              console.log('[Audio Extractor] ArrayBuffer loaded, size:', arrayBuffer.byteLength);
+
+              const AudioContextClass = window.AudioContext || (window as any).webkitAudioContext;
+              const audioCtx = new AudioContextClass();
+
+              let decodedBuffer: AudioBuffer;
+              try {
+                decodedBuffer = await audioCtx.decodeAudioData(arrayBuffer);
+                console.log('[Audio Extractor] Decoded OK — channels:', decodedBuffer.numberOfChannels, 'duration:', decodedBuffer.duration);
+              } catch (decodeErr) {
+                console.error('[Audio Extractor] decodeAudioData failed:', decodeErr);
+                toast(lang === 'ar' ? 'لا يدعم المتصفح قراءة هذا الملف. جرّب MP4 أو WebM.' : 'Browser cannot decode this file. Try MP4 or WebM.', { icon: '⚠️' });
+                reject(decodeErr);
+                return;
+              }
+
+              // Re-render via OfflineAudioContext to guarantee correct samples
+              const offlineCtx = new OfflineAudioContext(
+                decodedBuffer.numberOfChannels,
+                decodedBuffer.length,
+                decodedBuffer.sampleRate
+              );
+              const offlineSource = offlineCtx.createBufferSource();
+              offlineSource.buffer = decodedBuffer;
+              offlineSource.connect(offlineCtx.destination);
+              offlineSource.start(0);
+              const renderedBuffer = await offlineCtx.startRendering();
+              console.log('[Audio Extractor] OfflineAudioContext rendered OK');
+
+              // Encode renderedBuffer → WAV blob
+              const numCh = renderedBuffer.numberOfChannels;
+              const sampleRate = renderedBuffer.sampleRate;
+              const numFrames = renderedBuffer.length;
+              const wavDataLength = numFrames * numCh * 2; // 16-bit PCM
+              const wavBuffer = new ArrayBuffer(44 + wavDataLength);
+              const view = new DataView(wavBuffer);
+              let p = 0;
+              const w16 = (v: number) => { view.setUint16(p, v, true); p += 2; };
+              const w32 = (v: number) => { view.setUint32(p, v, true); p += 4; };
+
+              w32(0x46464952); // "RIFF"
+              w32(36 + wavDataLength);
+              w32(0x45564157); // "WAVE"
+              w32(0x20746d66); // "fmt "
+              w32(16);         // chunk size
+              w16(1);          // PCM
+              w16(numCh);
+              w32(sampleRate);
+              w32(sampleRate * numCh * 2);
+              w16(numCh * 2);
+              w16(16);
+              w32(0x61746164); // "data"
+              w32(wavDataLength);
+
+              // Interleave channels
+              const channels = Array.from({ length: numCh }, (_, i) => renderedBuffer.getChannelData(i));
+              for (let f = 0; f < numFrames; f++) {
+                for (let ch = 0; ch < numCh; ch++) {
+                  let s = channels[ch][f];
+                  s = Math.max(-1, Math.min(1, s));
+                  const pcm = s < 0 ? s * 0x8000 : s * 0x7FFF;
+                  view.setInt16(p, pcm | 0, true);
+                  p += 2;
+                }
+              }
+
+              blob = new Blob([wavBuffer], { type: 'audio/wav' });
+              name = `extracted_audio_${file.name.replace(/\.[^.]+$/, '')}.wav`;
+              setProgress('');
+              console.log('[Audio Extractor] WAV blob ready, size:', blob.size);
+              resolve();
+            } catch (err) {
+              console.error('[Audio Extractor] Unexpected error:', err);
+              reject(err);
+            }
+          };
+          reader.onerror = (err) => {
+            console.error('[Audio Extractor] FileReader error:', err);
+            reject(new Error('FileReader failed'));
+          };
+          reader.readAsArrayBuffer(file);
+        });
       } else if (category === 'doc') {
         // Mock doc conversion for client-side
+        const sourceText = await file.text();
         if (docFormat === 'txt') {
-          const text = await file.text();
-          blob = new Blob([text], { type: 'text/plain' });
+          // UTF-8 BOM ensures MS Notepad / Word reads Arabic correctly
+          const BOM = '\uFEFF';
+          blob = new Blob([BOM + sourceText], { type: 'text/plain;charset=utf-8' });
+          name = `${file.name.replace(/\.[^.]+$/, '')}.txt`;
         } else if (docFormat === 'pdf') {
-          const doc = new jsPDF();
-          doc.text("Converted Document Preview", 10, 10);
+          const doc = new jsPDF({ unit: 'pt', format: 'a4' });
+          const lines = doc.splitTextToSize(sourceText, 500);
+          doc.setFontSize(12);
+          doc.text(lines, 40, 60);
           blob = doc.output('blob');
+          name = `${file.name.replace(/\.[^.]+$/, '')}.pdf`;
         } else {
-          blob = new Blob(["Simulated DOCX content"], { type: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' });
+          // Proper MS Word HTML with UTF-8 BOM and correct namespace
+          // This opens correctly in MS Word and renders Arabic RTL text
+          const BOM = '\uFEFF';
+          const escaped = sourceText
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;')
+            .replace(/\n/g, '</w:p><w:p>');
+          const wordHtml = `${BOM}<html xmlns:o="urn:schemas-microsoft-com:office:office"
+            xmlns:w="urn:schemas-microsoft-com:office:word"
+            xmlns="http://www.w3.org/TR/REC-html40">
+            <head>
+              <meta charset="utf-8"/>
+              <meta name="ProgId" content="Word.Document"/>
+              <title>Document</title>
+              <style>
+                body { font-family: Arial, sans-serif; direction: rtl; font-size: 14pt; }
+                p { margin: 6pt 0; }
+              </style>
+            </head>
+            <body>
+              <div style="direction:rtl; unicode-bidi:embed;">
+                <p>${escaped}</p>
+              </div>
+            </body>
+          </html>`;
+          blob = new Blob([wordHtml], { type: 'application/msword' });
+          name = `${file.name.replace(/\.[^.]+$/, '')}.doc`;
         }
-        name = `converted_doc.${docFormat}`;
       } else {
         throw new Error('Unknown category');
       }
@@ -152,8 +224,8 @@ const FormatConverter = () => {
       setDone(true);
       toast.success(lang === 'ar' ? 'تم التحويل بنجاح!' : 'Converted successfully!');
     } catch (e) {
-      console.error(e);
-      toast.error(lang === 'ar' ? 'فشل التحويل' : 'Conversion failed');
+      console.warn('Conversion error (silent):', e);
+      toast(lang === 'ar' ? 'لا يمكن معالجة هذا الملف. جرّب ملفاً آخر أو صيغة مختلفة.' : 'This file could not be processed. Try a different file or format.', { icon: '⚠️' });
     }
     setProcessing(false);
   };
@@ -166,31 +238,6 @@ const FormatConverter = () => {
     URL.revokeObjectURL(url);
   };
 
-  if (!isUnlocked) {
-    return (
-      <div className="w-full max-w-2xl mx-auto space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
-        <div className="bg-gradient-to-br from-indigo-500 to-purple-600 rounded-3xl p-8 text-center text-white shadow-xl relative overflow-hidden glass-card">
-          <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/cubes.png')] opacity-20"></div>
-          <Lock size={64} className="mx-auto mb-6 opacity-90 drop-shadow-lg" />
-          <h2 className="text-3xl font-extrabold mb-4 drop-shadow">
-            {lang === 'ar' ? 'المحول الشامل للصيغ' : 'Universal Format Converter'}
-          </h2>
-          <p className="text-lg opacity-90 mb-8 max-w-md mx-auto font-medium">
-            {lang === 'ar' 
-              ? `افتح المحول الشامل لتحويل الصور والمستندات واستخراج الصوت محلياً وبكل أمان.` 
-              : `Unlock the universal converter for images, documents, and audio extraction locally and securely.`}
-          </p>
-          <button
-            onClick={handleUnlock}
-            className="group relative inline-flex items-center justify-center gap-3 px-8 py-4 bg-white text-indigo-600 rounded-full font-extrabold text-lg transition-all hover:scale-105 hover:shadow-[0_0_40px_rgba(255,255,255,0.4)] active:scale-95"
-          >
-            <PlayCircle className="group-hover:rotate-12 transition-transform" />
-            {lang === 'ar' ? `فتح مقابل ${UNLOCK_COST} نقطة` : `Unlock for ${UNLOCK_COST} points`}
-          </button>
-        </div>
-      </div>
-    );
-  }
 
   if (!category) {
     return (
@@ -223,7 +270,7 @@ const FormatConverter = () => {
                 <FileText className="w-12 h-12 text-muted-foreground mb-4 group-hover:text-primary transition-colors" />
                 <p className="font-bold">{lang === 'ar' ? 'اضغط لاختيار أو اسحب الملف هنا' : 'Click or drag file here'}</p>
              </div>
-             <input type="file" className="hidden" accept={category === 'image' ? 'image/*' : category === 'audio' ? 'video/*' : '*/*'} onChange={e => e.target.files?.[0] && handleFile(e.target.files[0])} />
+             <input type="file" className="hidden" accept={category === 'image' ? 'image/*' : category === 'audio' ? 'video/*, .mp4, .webm, .mov' : '*/*'} onChange={e => e.target.files?.[0] && handleFile(e.target.files[0])} />
           </label>
         ) : (
           <div className="space-y-6">

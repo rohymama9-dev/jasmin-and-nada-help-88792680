@@ -1,6 +1,7 @@
 import { useEffect, useState, useCallback } from 'react';
 import { LanguageProvider, useLang } from '@/contexts/LanguageContext';
 import { PointsProvider, usePoints } from '@/contexts/PointsContext';
+import { ThemeProvider } from '@/contexts/ThemeContext';
 import { supabase } from '@/integrations/supabase/client';
 import BottomNav from '@/components/BottomNav';
 import HomePage from '@/pages/HomePage';
@@ -15,6 +16,7 @@ import FlowerEntryAnimation from '@/components/FlowerEntryAnimation';
 import GoogleConnectDialog, { type GoogleConnectReason } from '@/components/GoogleConnectDialog';
 import { setRequireGoogleHandler } from '@/lib/requireGoogle';
 import { DailyComboChallengeProvider } from '@/contexts/DailyComboChallengeContext';
+import LiquidBackground from '@/components/LiquidBackground';
 
 const AppContent = () => {
   const [page, setPage] = useState('home');
@@ -25,7 +27,6 @@ const AppContent = () => {
   const [showFlowers, setShowFlowers] = useState(false);
   const [googleReason, setGoogleReason] = useState<GoogleConnectReason>(null);
 
-  // Wire the global requireGoogle() helper to this component's state.
   useEffect(() => {
     return setRequireGoogleHandler((reason) => setGoogleReason(reason));
   }, []);
@@ -35,8 +36,6 @@ const AppContent = () => {
     setShowFlowers(true);
   }, []);
 
-  // Optional: auto-finish silently if a Supabase session arrives later
-  // (e.g. after Google connect for download). We don't gate the app on it.
   useEffect(() => {
     const { data: sub } = supabase.auth.onAuthStateChange((event) => {
       if (event === 'SIGNED_OUT') {
@@ -52,7 +51,8 @@ const AppContent = () => {
   }
 
   return (
-    <div dir={dir} className="min-h-[100dvh] bg-background max-w-lg mx-auto safe-area-padding">
+    <div dir={dir} className="min-h-[100dvh] bg-transparent max-w-lg mx-auto safe-area-padding relative z-0">
+      <LiquidBackground />
       {showFlowers && (
         <FlowerEntryAnimation
           name={guestName}
@@ -98,14 +98,17 @@ const AppContent = () => {
   );
 };
 
+// ThemeProvider must wrap everything so useTheme() works in all children
 const Index = () => (
-  <LanguageProvider>
-    <PointsProvider>
-      <DailyComboChallengeProvider>
-        <AppContent />
-      </DailyComboChallengeProvider>
-    </PointsProvider>
-  </LanguageProvider>
+  <ThemeProvider>
+    <LanguageProvider>
+      <PointsProvider>
+        <DailyComboChallengeProvider>
+          <AppContent />
+        </DailyComboChallengeProvider>
+      </PointsProvider>
+    </LanguageProvider>
+  </ThemeProvider>
 );
 
 export default Index;

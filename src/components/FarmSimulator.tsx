@@ -244,6 +244,19 @@ const FarmSimulator = ({ onScore, gender = 'female' }: Props) => {
     return loaded;
   });
 
+  const [shopOpen, setShopOpen] = useState<null | 'main' | 'seeds' | 'flowers' | 'eggs'>(null);
+  const [toastMsg, setToastMsg] = useState<string>('');
+  const toastTimer = useRef<number | null>(null);
+  const [, force] = useState(0);
+  const [walkFrame, setWalkFrame] = useState(0);
+  const lastMoveAt = useRef<number>(0);
+
+  const flash = useCallback((msg: string) => {
+    setToastMsg(msg);
+    if (toastTimer.current) window.clearTimeout(toastTimer.current);
+    toastTimer.current = window.setTimeout(() => setToastMsg(''), 1600);
+  }, []);
+
   // Travel cycles between Home → Premium → Forest → Home.
   // Costs 200 coins for first visit to a new world. Coins are SHARED across all worlds.
   const travel = useCallback(() => {
@@ -286,18 +299,13 @@ const FarmSimulator = ({ onScore, gender = 'female' }: Props) => {
     setState(loaded);
   }, [world, state, lang, flash]);
 
-  const [shopOpen, setShopOpen] = useState<null | 'main' | 'seeds' | 'flowers' | 'eggs'>(null);
-  const [toastMsg, setToastMsg] = useState<string>('');
-  const toastTimer = useRef<number | null>(null);
-  const [, force] = useState(0);
-  const [walkFrame, setWalkFrame] = useState(0);
-  const lastMoveAt = useRef<number>(0);
   useEffect(() => {
     const id = window.setInterval(() => {
       if (Date.now() - lastMoveAt.current < 500) setWalkFrame(f => (f + 1) % 2);
     }, 220);
     return () => clearInterval(id);
   }, []);
+
 
   // Persist active world's save whenever state changes.
   useEffect(() => { lsSetJSON(STORAGE_KEY_FOR(world), state); }, [world, state]);
@@ -312,7 +320,7 @@ const FarmSimulator = ({ onScore, gender = 'female' }: Props) => {
   // flowers just need to be present & bloomed to enable production.
   // 1 unit = getHoneyYield(world) coins (5 / 7 / 10).
   useEffect(() => {
-    const blooms = Object.values(state.flowerStates).filter(f => f.plantedAt && Date.now() - f.plantedAt >= FLOWER_BLOOM_MS).length;
+    const blooms = Object.values(state.flowerStates || {}).filter(f => f.plantedAt && Date.now() - f.plantedAt >= FLOWER_BLOOM_MS).length;
     if (blooms <= 0) return;
     const elapsed = Date.now() - state.hiveLastAt;
     const cycles = Math.floor(elapsed / HONEY_PRODUCE_MS);
@@ -323,19 +331,13 @@ const FarmSimulator = ({ onScore, gender = 'female' }: Props) => {
     }
   }, [state.flowerStates, state.hiveLastAt]);
 
-  const flash = useCallback((msg: string) => {
-    setToastMsg(msg);
-    if (toastTimer.current) window.clearTimeout(toastTimer.current);
-    toastTimer.current = window.setTimeout(() => setToastMsg(''), 1600);
-  }, []);
-
   // ───────── "Ready" toasts: notify exactly once when crops/honey/animal products become collectable.
   const notifiedRef = useRef<Set<string>>(new Set());
   useEffect(() => {
     const now = Date.now();
     const next = notifiedRef.current;
     // Crops
-    Object.entries(state.plotStates).forEach(([k, ps]) => {
+    Object.entries(state.plotStates || {}).forEach(([k, ps]) => {
       if (!ps.kind || !ps.plantedAt) return;
       const seed = getSeeds(world).find(s => s.id === ps.kind);
       if (!seed) return;
@@ -351,7 +353,7 @@ const FarmSimulator = ({ onScore, gender = 'female' }: Props) => {
       if (!next.has(tag)) { next.add(tag); flash(`🍯 ${lang === 'ar' ? 'العسل جاهز!' : 'Honey ready!'}`); }
     }
     // Animal products
-    Object.entries(state.barns).forEach(([k, b]) => {
+    Object.entries(state.barns || {}).forEach(([k, b]) => {
       if (!b.animal) return;
       const a = getAnimals(world).find(x => x.id === b.animal);
       if (!a) return;
@@ -613,8 +615,8 @@ const FarmSimulator = ({ onScore, gender = 'female' }: Props) => {
 
   // ───────── Render ─────────
 
-  const totalInv = Object.values(state.inventory).reduce((a, b) => a + b, 0);
-  const blooms = Object.values(state.flowerStates).filter(f => f.plantedAt && Date.now() - f.plantedAt >= FLOWER_BLOOM_MS).length;
+  const totalInv = Object.values(state.inventory || {}).reduce((a, b) => a + b, 0);
+  const blooms = Object.values(state.flowerStates || {}).filter(f => f.plantedAt && Date.now() - f.plantedAt >= FLOWER_BLOOM_MS).length;
 
   // Tile rendering helpers
   const tileBg = (t: TileCode): string => {
@@ -696,8 +698,8 @@ const FarmSimulator = ({ onScore, gender = 'female' }: Props) => {
 
   // ───────── Missions ─────────
   // Lightweight mission ladder — uses existing save state, no new persistence.
-  const ownedPlotsCount = Object.keys(state.ownedPlots).length;
-  const animalsCount = Object.values(state.barns).filter(b => b.animal).length;
+  const ownedPlotsCount = Object.keys(state.ownedPlots || {}).length;
+  const animalsCount = Object.values(state.barns || {}).filter(b => b.animal).length;
   const missions = [
     { id: 'm1', target: 50,  done: state.coins >= 50,  ar: 'اجمعي 50 🪙',          en: 'Earn 50 🪙' },
     { id: 'm2', target: 5,   done: ownedPlotsCount >= 5, ar: 'تملّكي 5 قطع أرض',     en: 'Own 5 plots' },
@@ -836,7 +838,7 @@ const FarmSimulator = ({ onScore, gender = 'female' }: Props) => {
           maxWidth: '100%',
         }}>
         {/* Tiles */}
-        {MAP.map((row, y) => row.map((t, x) => {
+        {(MAP || []).map((row, y) => (row || []).map((t, x) => {
           const isTarget = !!tileForHint && tileForHint.x === x && tileForHint.y === y;
           // Compute "ready" indicator for crops/flowers/animals.
           let ready = false;

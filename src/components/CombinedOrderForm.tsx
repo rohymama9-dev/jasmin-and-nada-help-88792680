@@ -19,10 +19,10 @@ const OFFER_SERVICES = [
   { id: 'offer_img', arName: 'تعديل صورتين بالذكاء الاصطناعي مع دمجهم مع الصور القديمة وتحسين جودتهم', enName: 'AI Image Editing (2 images)', price: '$3', arPrice: '$3 بدل $5', enPrice: '$3 instead of $5' },
   { id: 'offer_pdf', arName: 'تحويل ملفين Word/PDF',            enName: 'Word/PDF Conversion (2 files)', price: '$3', arPrice: '$3 بدل $5', enPrice: '$3 instead of $5' },
   { id: 'offer_bg10', arName: 'إزالة خلفية 10 صور مع تحسين جودتهم مع اضافتهم للقديمه وعدم عرضهم في معرض صوري', enName: 'Remove BG & upscale 10 images (Private)', price: '$10' },
-  { id: 'offer_vid_compress3', arName: 'باقة ضغط 3 فيديوهات', enName: 'Compress 3 videos bundle', price: '$15', arPrice: '15 دولار بدلاً من 30', enPrice: '$15 instead of $30' },
-  { id: 'offer_mp4_to_mp3', arName: 'باقة تحويل فيديو إلى صوت (MP4 to MP3)', enName: 'MP4 to MP3 conversion', price: '$20', arPrice: '20 دولار', enPrice: '$20' },
+  { id: 'offer_vid_compress3', arName: 'باقة ترجمة 3 فيديوهات', enName: 'translate 3 videos bundle', price: '$15', arPrice: '15 دولار بدلاً من 30', enPrice: '$15 instead of $30' },
+  { id: 'offer_mp4_to_mp3', arName: 'باقة تحويل15 فيديو إلى صوت (MP4 to MP3)', enName: 'MP4 to MP3 conversion 15 videos', price: '$20', arPrice: '20 دولار', enPrice: '$20' },
   { id: 'offer_hide_gallery', arName: 'عرض الخصم الهائل: عدم عرض الصور في معرضي الخاص', enName: 'Hide photos from private gallery', price: '$3', arPrice: '3 دولار بدلاً من 20 دولار', enPrice: '$3 instead of $20' },
-  { id: 'offer_restore_10', arName: 'باقة ترميم وتلوين الصور', enName: 'Restore 10 images bundle', price: '$15', arPrice: '15 دولار بدلاً من 30', enPrice: '$15 instead of $30' },
+  { id: 'offer_restore_10', arName: 'باقة ترميم10 وتلوين الصور وتحسين الجودة', enName: 'Restore 10 images bundle', price: '$15', arPrice: '15 دولار بدلاً من 30', enPrice: '$15 instead of $30' },
 ];
 
 export default function CombinedOrderForm({ onClose, lang, hideOffers }: { onClose: () => void; lang: string; hideOffers?: boolean }) {

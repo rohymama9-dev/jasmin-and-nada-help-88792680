@@ -84,10 +84,13 @@ const QuranView = () => {
   return (
     <div className="fixed inset-x-0 top-0 bottom-16 max-w-lg mx-auto flex flex-col bg-background overflow-hidden">
       {/* Header */}
-      <div className="flex flex-col gap-3 px-4 py-3 border-b border-border/50 bg-background/50 backdrop-blur-sm flex-shrink-0">
-        <div className="flex items-center gap-2">
-          <BookMarked size={20} className="text-primary" />
-          <h1 className="font-bold text-foreground text-sm sm:text-base">
+      <div className="shrink-0 bg-gradient-to-r from-emerald-500 to-teal-500 z-10 px-4 pt-4 shadow-sm border-b border-border/50 text-white pb-1">
+        {/* Header Title */}
+        <div className="flex items-center gap-3 mb-3">
+          <div className="p-2 rounded-xl bg-white/20 text-white backdrop-blur-sm border border-white/30">
+            <BookMarked size={20} />
+          </div>
+          <h1 className="font-bold text-white text-sm sm:text-base">
             {lang === 'ar' ? 'القرآن الكريم' : 'Quran'}
           </h1>
 
@@ -96,8 +99,8 @@ const QuranView = () => {
             <button
               onClick={handleSaveMark}
               className="ml-auto flex items-center gap-1.5 px-3 py-1.5 rounded-xl
-                         bg-primary/10 hover:bg-primary/20 active:scale-95
-                         text-primary text-xs font-semibold transition-all"
+                         bg-white/20 hover:bg-white/30 active:scale-95
+                         text-white text-xs font-semibold transition-all backdrop-blur-sm border border-white/20"
             >
               <Bookmark size={14} />
               {lang === 'ar' ? 'حفظ العلامة' : 'Save Mark'}
@@ -132,7 +135,7 @@ const QuranView = () => {
       </div>
 
       {/* Content */}
-      <div className="flex-1 w-full overflow-hidden">
+      <div className="flex-1 w-full overflow-hidden flex flex-col">
         {activeTab === 'quran' ? (
           <iframe
             src={QURAN_URL}

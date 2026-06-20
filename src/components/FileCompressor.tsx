@@ -1,6 +1,6 @@
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef } from 'react';
 import { useLang } from '@/contexts/LanguageContext';
-import { Download, X, Check, Lock, PlayCircle, Settings2, Image as ImageIcon, FileText, Video } from 'lucide-react';
+import { Download, X, Check, Settings2, Image as ImageIcon, FileText, Video } from 'lucide-react';
 import { toast } from 'sonner';
 
 const FileCompressor = () => {
@@ -13,6 +13,7 @@ const FileCompressor = () => {
   const [compressionRatio, setCompressionRatio] = useState(70);
   const [imageFormat, setImageFormat] = useState<'auto' | 'image/webp' | 'image/jpeg' | 'image/png'>('auto');
   const [videoFormat, setVideoFormat] = useState<'video/mp4' | 'video/webm'>('video/mp4');
+  const [fileFormat, setFileFormat] = useState<'gzip' | 'deflate'>('gzip');
   
   const [processing, setProcessing] = useState(false);
   const [done, setDone] = useState(false);
@@ -21,23 +22,7 @@ const FileCompressor = () => {
   const [statusMessage, setStatusMessage] = useState<string | null>(null);
   const [progress, setProgress] = useState<string>('');
 
-  // Points & Unlocking logic
-  const [points, setPoints] = useState(() => parseInt(localStorage.getItem('points') || '100'));
-  const [isUnlocked, setIsUnlocked] = useState(() => localStorage.getItem('compressorUnlocked') === 'true');
-  const UNLOCK_COST = 80;
-
-  const handleUnlock = () => {
-    if (points >= UNLOCK_COST) {
-      const newPoints = points - UNLOCK_COST;
-      setPoints(newPoints);
-      localStorage.setItem('points', newPoints.toString());
-      localStorage.setItem('compressorUnlocked', 'true');
-      setIsUnlocked(true);
-      toast.success(lang === 'ar' ? 'تم فك القفل بنجاح!' : 'Unlocked successfully!');
-    } else {
-      toast.error(lang === 'ar' ? 'نقاطك غير كافية!' : 'Not enough points!');
-    }
-  };
+  // Access is controlled by ServicesPage — no internal unlock needed
 
   const handleFile = (nextFile: File) => {
     if (preview) URL.revokeObjectURL(preview);
@@ -121,7 +106,9 @@ const FileCompressor = () => {
     try {
       const video = document.createElement('video');
       video.src = URL.createObjectURL(file);
-      video.muted = true;
+      // MUST be false to capture the audio track
+      video.muted = false;
+      video.volume = 1;
       video.crossOrigin = 'anonymous';
       
       await new Promise<void>((resolve, reject) => {
@@ -130,41 +117,69 @@ const FileCompressor = () => {
       });
 
       const canvas = document.createElement('canvas');
-      let scale = 1;
-      if (compressionRatio > 50) scale = 1 - ((compressionRatio - 50) / 100); 
-      canvas.width = video.videoWidth * scale;
-      canvas.height = video.videoHeight * scale;
+      
+      // Calculate dynamic scale to guarantee size reduction
+      const scaleDown = 1 - ((compressionRatio / 100) * 0.7);
+      canvas.width = Math.max(video.videoWidth * scaleDown, 10);
+      canvas.height = Math.max(video.videoHeight * scaleDown, 10);
       
       const ctx = canvas.getContext('2d');
-      const stream = canvas.captureStream(30); // 30 FPS
-      
-      // Try to get audio track
+      const videoStream = canvas.captureStream(30); // 30 FPS
+
+      // Capture audio track via AudioContext routed to MediaStreamDestination
       const audioCtx = new AudioContext();
-      const dest = audioCtx.createMediaStreamDestination();
+      const audioDest = audioCtx.createMediaStreamDestination();
       try {
         const source = audioCtx.createMediaElementSource(video);
-        source.connect(dest);
-        const audioTrack = dest.stream.getAudioTracks()[0];
-        if (audioTrack) stream.addTrack(audioTrack);
-      } catch (e) {
-        // Audio might fail if cross-origin, ignore
+        source.connect(audioDest);
+        source.connect(audioCtx.destination); // also play it so video.play() works
+        const audioTrack = audioDest.stream.getAudioTracks()[0];
+        if (audioTrack) {
+          videoStream.addTrack(audioTrack);
+          console.log('[VideoCompressor] Audio track captured OK');
+        }
+      } catch (audioErr) {
+        console.warn('[VideoCompressor] Could not capture audio track:', audioErr);
+        // Continue without audio rather than failing completely
       }
 
-      const mimeType = videoFormat === 'video/mp4' ? 'video/mp4' : 'video/webm;codecs=vp8,opus';
-      const options = { mimeType: MediaRecorder.isTypeSupported(mimeType) ? mimeType : '' };
-      const recorder = new MediaRecorder(stream, options);
+      // Calculate Target Bitrate
+      const originalBitrate = (file.size * 8) / (video.duration || 1);
+      const minBitrate = 50000;
+      let targetBitrate = originalBitrate * ((100 - compressionRatio) / 100);
+      if (targetBitrate < minBitrate) targetBitrate = minBitrate;
+      if (targetBitrate >= originalBitrate) targetBitrate = originalBitrate * 0.95;
+
+      // Pick best supported mimeType with audio codec included
+      const preferredTypes = [
+        'video/webm;codecs=vp9,opus',
+        'video/webm;codecs=vp8,opus',
+        'video/mp4',
+        'video/webm',
+      ];
+      const mimeType = preferredTypes.find(t => MediaRecorder.isTypeSupported(t)) || '';
+      const options: MediaRecorderOptions = { 
+        mimeType,
+        videoBitsPerSecond: targetBitrate * 0.8,
+        audioBitsPerSecond: 128000, // 128kbps — keeps audio quality
+      };
+      
+      const recorder = new MediaRecorder(videoStream, options);
       const chunks: Blob[] = [];
 
       recorder.ondataavailable = e => { if (e.data.size > 0) chunks.push(e.data); };
       recorder.onstop = () => {
-        const blob = new Blob(chunks, { type: recorder.mimeType || 'video/mp4' });
+        const blob = new Blob(chunks, { type: recorder.mimeType || 'video/webm' });
         setResultBlob(blob);
         setResultSize(blob.size);
         setDone(true);
-        setStatusMessage(lang === 'ar' ? 'تم ضغط الفيديو بنجاح.' : 'Video compressed successfully.');
+        setProcessing(false);
+        setStatusMessage(lang === 'ar' ? 'تم ضغط الفيديو بنجاح مع الصوت.' : 'Video compressed successfully with audio.');
+        audioCtx.close();
+        URL.revokeObjectURL(video.src);
       };
 
-      video.play();
+      await video.play();
       recorder.start();
 
       const renderLoop = () => {
@@ -179,39 +194,33 @@ const FileCompressor = () => {
       
       requestAnimationFrame(renderLoop);
     } catch (error) {
-      console.error(error);
+      console.error('[VideoCompressor] Error:', error);
       toast.error(lang === 'ar' ? 'فشل ضغط الفيديو.' : 'Video compression failed.');
       setProcessing(false);
     }
   };
 
-  const compressFileGzip = async () => {
+  const compressFileZip = async () => {
     if (!file) return;
-    if (!('CompressionStream' in window)) {
-      toast.error(lang === 'ar' ? 'متصفحك لا يدعم هذا النوع من الضغط.' : 'Your browser does not support this compression.');
-      setProcessing(false);
-      return;
-    }
-
     try {
-      const stream = file.stream();
-      const compressedStream = stream.pipeThrough(new CompressionStream('gzip'));
-      const reader = compressedStream.getReader();
-      const chunks = [];
-      let total = 0;
+      const JSZip = (await import('jszip')).default;
+      const zip = new JSZip();
+      
+      zip.file(file.name, file);
+      
+      const compression = fileFormat === 'gzip' ? 'DEFLATE' : 'STORE';
+      const compressionOptions = fileFormat === 'gzip' ? { level: 9 } : undefined;
+      
+      const content = await zip.generateAsync({
+        type: 'blob',
+        compression: compression,
+        compressionOptions: compressionOptions,
+      });
 
-      while (true) {
-        const { done, value } = await reader.read();
-        if (done) break;
-        chunks.push(value);
-        total += value.length;
-      }
-
-      const blob = new Blob(chunks, { type: 'application/gzip' });
-      setResultBlob(blob);
-      setResultSize(blob.size);
+      setResultBlob(content);
+      setResultSize(content.size);
       setDone(true);
-      setStatusMessage(lang === 'ar' ? 'تم ضغط الملف بصيغة GZIP.' : 'File compressed as GZIP.');
+      setStatusMessage(lang === 'ar' ? `تم ضغط الملف بصيغة ZIP.` : `File compressed as ZIP.`);
     } catch (e) {
       toast.error('Compression error');
     }
@@ -227,7 +236,7 @@ const FileCompressor = () => {
         await compressVideoNative();
         return; // handle processing state in recorder
       } else {
-        await compressFileGzip();
+        await compressFileZip();
       }
     } catch (error) {
       console.error(error);
@@ -241,44 +250,23 @@ const FileCompressor = () => {
     const a = document.createElement('a');
     a.href = URL.createObjectURL(resultBlob);
     
-    let ext = '.gz';
+    let ext = '.zip';
+    let baseName = file.name.substring(0, file.name.lastIndexOf('.')) || file.name;
+
     if (tab === 'image') {
       const outType = imageFormat === 'auto' ? file.type : imageFormat;
       ext = outType === 'image/jpeg' ? '.jpg' : outType === 'image/png' ? '.png' : '.webp';
     } else if (tab === 'video') {
       ext = videoFormat === 'video/mp4' ? '.mp4' : '.webm';
+    } else {
+      ext = '.zip';
     }
 
-    a.download = `compressed_${file.name.replace(/\.[^/.]+$/, '')}${ext}`;
+    a.download = `${baseName}_compressed${ext}`;
     a.click();
     URL.revokeObjectURL(a.href);
   };
 
-  if (!isUnlocked) {
-    return (
-      <div className="w-full max-w-2xl mx-auto space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
-        <div className="bg-gradient-to-br from-indigo-500 to-purple-600 rounded-3xl p-8 text-center text-white shadow-xl relative overflow-hidden glass-card">
-          <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/cubes.png')] opacity-20"></div>
-          <Lock size={64} className="mx-auto mb-6 opacity-90 drop-shadow-lg" />
-          <h2 className="text-3xl font-extrabold mb-4 drop-shadow">
-            {lang === 'ar' ? 'ضغط الملفات والصور والفيديوهات' : 'Universal Compressor'}
-          </h2>
-          <p className="text-lg opacity-90 mb-8 max-w-md mx-auto font-medium">
-            {lang === 'ar' 
-              ? `افتح أداة الضغط الشاملة لتقليل حجم الصور، الفيديوهات، والملفات محلياً وبأعلى جودة.` 
-              : `Unlock the universal compressor to reduce image, video, and file sizes locally with highest quality.`}
-          </p>
-          <button
-            onClick={handleUnlock}
-            className="group relative inline-flex items-center justify-center gap-3 px-8 py-4 bg-white text-indigo-600 rounded-full font-extrabold text-lg transition-all hover:scale-105 hover:shadow-[0_0_40px_rgba(255,255,255,0.4)] active:scale-95"
-          >
-            <PlayCircle className="group-hover:rotate-12 transition-transform" />
-            {lang === 'ar' ? `فتح مقابل ${UNLOCK_COST} نقطة` : `Unlock for ${UNLOCK_COST} points`}
-          </button>
-        </div>
-      </div>
-    );
-  }
 
   return (
     <div className="w-full max-w-2xl mx-auto space-y-6 animate-in fade-in duration-500">
@@ -352,7 +340,7 @@ const FileCompressor = () => {
               )}
             </div>
 
-            {(tab === 'image' || tab === 'video') && !done && (
+            {!done && (
               <div className="bg-card border border-border rounded-2xl p-5 space-y-5 shadow-inner">
                 <div className="space-y-3">
                   <div className="flex justify-between items-center">
@@ -414,6 +402,26 @@ const FileCompressor = () => {
                           key={option.value}
                           onClick={() => setVideoFormat(option.value)}
                           className={`py-2 rounded-xl text-xs font-bold border transition-colors ${videoFormat === option.value ? 'bg-primary text-primary-foreground border-primary shadow-sm' : 'border-border text-muted-foreground hover:border-primary/50 hover:bg-secondary/50'}`}
+                        >
+                          {option.label}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                )}
+                
+                {tab === 'file' && (
+                  <div className="space-y-3 pt-2">
+                    <span className="font-bold text-xs text-muted-foreground">{lang === 'ar' ? 'صيغة الإخراج' : 'Output Format'}</span>
+                    <div className="grid grid-cols-2 gap-2">
+                      {[
+                        { label: 'GZIP (.gz)', value: 'gzip' as const },
+                        { label: 'Deflate (.deflate)', value: 'deflate' as const },
+                      ].map(option => (
+                        <button
+                          key={option.value}
+                          onClick={() => setFileFormat(option.value)}
+                          className={`py-2 rounded-xl text-xs font-bold border transition-colors ${fileFormat === option.value ? 'bg-primary text-primary-foreground border-primary shadow-sm' : 'border-border text-muted-foreground hover:border-primary/50 hover:bg-secondary/50'}`}
                         >
                           {option.label}
                         </button>

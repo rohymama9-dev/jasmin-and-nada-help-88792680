@@ -27,14 +27,14 @@ const DailyComboChallenge = () => {
   const allDone = completedCount === TASKS.length;
 
   return (
-    <div className="glass-card rounded-2xl p-5 space-y-4 bg-gradient-to-br from-violet-50 to-purple-50 border-violet-200 animate-slide-up">
+    <div className="glass-card rounded-2xl p-5 space-y-4 bg-gradient-to-br from-indigo-500 via-purple-500 to-fuchsia-500 shadow-[0_0_25px_rgba(168,85,247,0.4)] border-none animate-slide-up text-white">
       <div className="flex items-center justify-between">
-        <h3 className="font-bold text-lg text-violet-900">{lang === 'ar' ? '🌟 تحدي اليوم المتكامل' : '🌟 Daily Combo Challenge'}</h3>
-        <span className="text-sm font-bold text-violet-700">{completedCount}/{TASKS.length}</span>
+        <h3 className="font-bold text-lg text-white">{lang === 'ar' ? '🌟 تحدي اليوم المتكامل' : '🌟 Daily Combo Challenge'}</h3>
+        <span className="text-sm font-bold text-white/90">{completedCount}/{TASKS.length}</span>
       </div>
 
-      <div className="w-full h-2 bg-violet-200 rounded-full overflow-hidden">
-        <div className="h-full bg-gradient-to-r from-violet-500 to-purple-500 transition-all duration-300" style={{ width: `${(completedCount / TASKS.length) * 100}%` }} />
+      <div className="w-full h-2 bg-white/20 rounded-full overflow-hidden">
+        <div className="h-full bg-white transition-all duration-300 shadow-[0_0_10px_white]" style={{ width: `${(completedCount / TASKS.length) * 100}%` }} />
       </div>
 
       <div className="grid grid-cols-2 gap-2">
@@ -42,14 +42,14 @@ const DailyComboChallenge = () => {
           const Icon = t.icon as any;
           const isDone = completed.has(t.id);
           return (
-            <div key={t.id} className={`p-3 rounded-xl flex items-center gap-2 transition-all ${isDone ? 'bg-success/20 border border-success/30' : 'bg-violet-100 border border-violet-200'}`}>
-              <Icon size={18} className={isDone ? 'text-success' : 'text-violet-600'} />
-              <div className="flex-1">
+            <div key={t.id} className={`p-3 rounded-xl flex items-center gap-2 transition-all backdrop-blur-sm ${isDone ? 'bg-white/30 border border-white/50 shadow-inner' : 'bg-white/10 border border-white/20'}`}>
+              <Icon size={18} className={isDone ? 'text-white' : 'text-white/70'} />
+              <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-2">
-                  <span className={`text-xs font-semibold ${isDone ? 'text-success' : 'text-violet-700'}`}>{lang === 'ar' ? t.labelAr : t.labelEn}</span>
-                  {isDone && <span className="text-xs ml-auto">✓</span>}
+                  <span className={`text-xs font-semibold truncate ${isDone ? 'text-white' : 'text-white/90'}`}>{lang === 'ar' ? t.labelAr : t.labelEn}</span>
+                  {isDone && <span className="text-xs ml-auto text-white drop-shadow-md">✓</span>}
                 </div>
-                <p className="text-[11px] text-muted-foreground mt-1">{t.target}</p>
+                <p className="text-[10px] text-white/70 mt-0.5 truncate">{t.target}</p>
               </div>
             </div>
           );
@@ -57,7 +57,9 @@ const DailyComboChallenge = () => {
       </div>
 
       {allDone && (
-        <div className="p-3 rounded-xl bg-success/10 text-success font-bold text-center border border-success/20">{lang === 'ar' ? '🎉 حصلتِ على ٦٠ نقطة!' : '🎉 60 points awarded!'}</div>
+        <div className="p-3 rounded-xl bg-white/20 text-white font-bold text-center border border-white/40 shadow-[0_0_15px_rgba(255,255,255,0.3)] animate-pulse-soft">
+          {lang === 'ar' ? '🎉 حصلتِ على ٦٠ نقطة!' : '🎉 60 points awarded!'}
+        </div>
       )}
 
       {!pointsAwarded && (

@@ -181,7 +181,7 @@ export const DailyComboChallengeProvider = ({ children }: { children: React.Reac
     try {
       if (localStorage.getItem('combo-habit-today') === today) next.push('habit');
       if (localStorage.getItem('combo-med-today') === today) next.push('medication');
-      if (localStorage.getItem('combo-edu-today') === today) next.push('education');
+      if (localStorage.getItem('combo-edu-today') === today || localStorage.getItem('combo-quran-today') === today) next.push('education');
     } catch {
       // ignore
     }
@@ -204,6 +204,7 @@ export const DailyComboChallengeProvider = ({ children }: { children: React.Reac
         'combo-habit-today',
         'combo-med-today',
         'combo-edu-today',
+        'combo-quran-today',
       ];
       if (!e.key || watched.includes(e.key)) evaluateFromStorage();
     };

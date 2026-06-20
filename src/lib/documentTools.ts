@@ -38,16 +38,9 @@ export const normalizeWhitespace = (value: string) => value.replace(/\s+/g, ' ')
 export const normalizeArabicText = (text: string): string => {
   if (!text) return '';
 
-  let cleaned = text.replace(/[\u200B-\u200D\uFEFF\u200E\u200F\u202A-\u202E]/g, '');
-  const arabicRegex = /[\u0600-\u06FF\u0750-\u077F\u08A0-\u08FF]/;
-
-  if (!arabicRegex.test(cleaned)) return normalizeWhitespace(cleaned);
-
-  cleaned = cleaned.replace(
-    /([\u0600-\u06FF\u0750-\u077F\u08A0-\u08FF])\s+([\u0600-\u06FF\u0750-\u077F\u08A0-\u08FF])/g,
-    '$1$2',
-  );
-
+  // Only remove zero-width spaces, DO NOT remove BIDI control characters (e.g., \u200E, \u200F, \u202A-\u202E)
+  let cleaned = text.replace(/[\u200B-\u200D\uFEFF]/g, '');
+  
   return normalizeWhitespace(cleaned);
 };
 

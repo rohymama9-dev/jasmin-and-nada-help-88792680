@@ -7,6 +7,7 @@ import WalkingTimer from '@/components/WalkingTimer';
 import SleepTracker from '@/components/SleepTracker';
 import WaterTracker from '@/components/WaterTracker';
 import MedicationReminder from '@/components/MedicationReminder';
+import floralBg from '@/assets/floral-bg.jpg';
 
 interface HealthHubProps {
   addPoints?: (n: number) => void;
@@ -144,9 +145,14 @@ const HealthHub = ({ addPoints = () => {}, onNavigateToExercises = () => {} }: H
 
   return (
     <div className="space-y-4 pb-4">
-      <h2 className="text-xl font-bold text-foreground px-2 mb-4">
-        {lang === 'ar' ? 'الصحة واللياقة' : 'Health & Fitness'}
-      </h2>
+      <div className="relative -mx-5 -mt-5 rounded-b-3xl overflow-hidden mb-4 bg-gradient-to-r from-cyan-500 to-blue-500 shadow-lg px-5 pt-8 pb-6 text-center">
+        <img src={floralBg} alt="" className="absolute inset-0 w-full h-full object-cover opacity-20 mix-blend-overlay pointer-events-none" />
+        <div className="relative z-10">
+          <h2 className="text-2xl font-extrabold text-white mb-2">
+            {lang === 'ar' ? 'الصحة واللياقة' : 'Health & Fitness'}
+          </h2>
+        </div>
+      </div>
       <div className="grid grid-cols-1 gap-3">
         <WaterTracker onDrink={() => { addPoints && addPoints(1); try { window.dispatchEvent(new CustomEvent('combo-water-logged')); } catch {} }} />
         <MedicationReminder />

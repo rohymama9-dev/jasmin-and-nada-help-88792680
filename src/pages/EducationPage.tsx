@@ -16,6 +16,7 @@ import DictationPhonics from '@/components/DictationPhonics';
 import GrammarQuestions from '@/components/GrammarQuestions';
 import { useDailyComboChallenge } from '@/contexts/DailyComboChallengeContext';
 import { normalizeWhitespace, parseSupportedDocument } from '@/lib/documentTools';
+import floralBg from '@/assets/floral-bg.jpg';
 
 interface Props {
   points: number;
@@ -289,15 +290,21 @@ const EducationPage = ({ points, educationPoints, addPoints }: Props) => {
 
   return (
     <div className="space-y-4 pb-4">
-      <div className="text-center mb-2">
-        <div className="w-16 h-16 rounded-2xl gradient-primary flex items-center justify-center mx-auto mb-3 shadow-lg">
-          <GraduationCap size={28} className="text-primary-foreground" />
+      <div className="relative -mx-5 -mt-5 rounded-b-3xl overflow-hidden mb-4 bg-gradient-to-r from-indigo-500 via-purple-500 to-violet-500 shadow-lg px-5 pt-8 pb-6 text-center">
+        <img src={floralBg} alt="" className="absolute inset-0 w-full h-full object-cover opacity-20 mix-blend-overlay pointer-events-none" />
+        <div className="relative z-10">
+          <div className="w-16 h-16 rounded-2xl bg-white/20 backdrop-blur-sm flex items-center justify-center mx-auto mb-3 shadow-sm border border-white/30">
+            <GraduationCap size={28} className="text-white" />
+          </div>
+          <h2 className="text-2xl font-extrabold text-white mb-2">
+            {t('مركز التعليم', 'Education Center')}
+          </h2>
+          <div className="text-white/90">
+            <GlobalLeaderboard currentPoints={educationPoints} section="education" />
+          </div>
         </div>
-        <h2 className="text-xl font-bold text-foreground">
-          {t('مركز التعليم', 'Education Center')}
-        </h2>
-        <GlobalLeaderboard currentPoints={educationPoints} section="education" />
-      <div className="flex justify-center gap-2 mt-4">
+      </div>
+      <div className="flex justify-center flex-wrap gap-2 mt-4 px-2">
           <button
             onClick={() => setActiveTab('math')}
             className={`px-4 py-2 rounded-xl text-xs font-bold transition-all ${activeTab === 'math' ? 'gradient-primary text-white' : 'bg-secondary text-muted-foreground'}`}
@@ -323,7 +330,7 @@ const EducationPage = ({ points, educationPoints, addPoints }: Props) => {
             {t('أداة المستندات', 'Document Tool')}
           </button>
         </div>
-      </div>
+
 
       {activeTab === 'math' && (
         <div className="glass-card rounded-2xl p-4">

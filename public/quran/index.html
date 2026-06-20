@@ -16,6 +16,11 @@
     <meta property="og:description" content="A beautiful Al-Quran digital application with Arabic text, translations, and audio recitations" />
     <meta property="og:type" content="website" />
     <title>Al-Quran Digital by Ahmad Wijaya</title>
+    <script type="module" crossorigin src="./assets/index-B61HVsYW.js"></script>
+    <link rel="stylesheet" crossorigin href="./assets/index-k1_W0Ef1.css">
+  </head>
+  <body>
+    <div id="root"></div>
     <script>
       (function() {
         const OriginalAudio = window.Audio;
@@ -41,31 +46,12 @@
 
           async loadCachedOrFetch(url) {
             try {
-              const dbName = 'QuranAudioCache';
-              const storeName = 'audio';
-              const db = await new Promise((resolve, reject) => {
-                const req = indexedDB.open(dbName, 1);
-                req.onupgradeneeded = () => req.result.createObjectStore(storeName);
-                req.onsuccess = () => resolve(req.result);
-                req.onerror = () => reject(req.error);
-              });
-              
-              const tx = db.transaction(storeName, 'readonly');
-              const store = tx.objectStore(storeName);
-              const cached = await new Promise((resolve) => {
-                const req = store.get(url);
-                req.onsuccess = () => resolve(req.result);
-                req.onerror = () => resolve(null);
-              });
-              
+              const cached = await caches.match(url);
               if (cached) {
-                super.src = URL.createObjectURL(cached);
+                const blob = await cached.blob();
+                super.src = URL.createObjectURL(blob);
               } else {
-                super.src = url;
-                fetch(url).then(res => res.blob()).then(blob => {
-                  const tx2 = db.transaction(storeName, 'readwrite');
-                  tx2.objectStore(storeName).put(blob, url);
-                }).catch(() => {});
+                super.src = url; // Fallback to network, no auto-download here
               }
             } catch (e) {
               super.src = url;
@@ -74,11 +60,86 @@
         }
         window.Audio = CachedAudio;
       })();
+
+      window.downloadSurah = async function(e, surahNum) {
+        e.stopPropagation();
+        const btn = e.currentTarget;
+        if (btn.dataset.downloading === 'true') return;
+        btn.dataset.downloading = 'true';
+        btn.innerHTML = '⏳';
+        btn.title = 'جاري التحميل...';
+        
+        const url = `https://cdn.islamic.network/quran/audio/128/ar.alafasy/${surahNum}.mp3`;
+        
+        try {
+          // Standard fetch — never use no-cors (produces 0-byte opaque responses)
+          const response = await fetch(url);
+          if (!response.ok) throw new Error(`HTTP ${response.status}`);
+          
+          const blob = await response.blob();
+          const cache = await caches.open('quran-audio-cache-v1');
+          // Store proper Response with correct content-type header
+          await cache.put(url, new Response(blob, {
+            headers: { 'Content-Type': 'audio/mpeg', 'Content-Length': String(blob.size) }
+          }));
+          
+          btn.innerHTML = '✅';
+          btn.title = 'تم التحميل - يعمل بدون إنترنت';
+          btn.dataset.downloading = 'done';
+        } catch(err) {
+          console.warn('[QuranDownloader] fetch failed, will play from network:', err);
+          // Reset silently — audio will still play from network
+          btn.innerHTML = '⬇️';
+          btn.dataset.downloading = 'false';
+          btn.title = 'يحتاج إنترنت للتحميل';
+        }
+      };
+
+      const initQuranDownloader = () => {
+        const observer = new MutationObserver(() => {
+          // Find the circles that contain the Surah numbers (they are w-10 h-10 flex items-center justify-center rounded-full)
+          const circles = document.querySelectorAll('.w-10.h-10.flex.items-center.justify-center.rounded-full');
+          
+          circles.forEach(circle => {
+            const surahBtn = circle.closest('button');
+            if (surahBtn && !surahBtn.hasAttribute('data-has-download')) {
+              surahBtn.setAttribute('data-has-download', 'true');
+              
+              const numText = circle.textContent;
+              if (!numText) return;
+              
+              const dlContainer = document.createElement('div');
+              dlContainer.innerHTML = `<div onclick="window.downloadSurah(event, ${numText})" style="padding: 4px 8px; font-size: 14px; margin-left: 10px; cursor: pointer; border-radius: 4px; background: rgba(16, 185, 129, 0.1); color: #10b981;" title="Download Offline">⬇️</div>`;
+              
+              const flex1 = surahBtn.querySelector('.flex-1');
+              if (flex1) {
+                const row = flex1.querySelector('.flex.items-center.justify-between');
+                if (row) {
+                  row.appendChild(dlContainer.firstElementChild);
+                  
+                  // Optional: Check if already downloaded
+                  const url = `https://cdn.islamic.network/quran/audio/128/ar.alafasy/${numText}.mp3`;
+                  caches.match(url).then(res => {
+                    if (res) {
+                      const injectedBtn = row.lastElementChild;
+                      if (injectedBtn) {
+                        injectedBtn.innerHTML = '✅';
+                        injectedBtn.title = 'Downloaded';
+                        injectedBtn.dataset.downloading = 'true';
+                      }
+                    }
+                  }).catch(() => {});
+                }
+              }
+            }
+          });
+        });
+
+        observer.observe(document.body, { childList: true, subtree: true });
+      };
+
+      // Run after slight delay to ensure React has mounted
+      setTimeout(initQuranDownloader, 1000);
     </script>
-    <script type="module" crossorigin src="./assets/index-B61HVsYW.js"></script>
-    <link rel="stylesheet" crossorigin href="./assets/index-k1_W0Ef1.css">
-  </head>
-  <body>
-    <div id="root"></div>
   </body>
 </html>

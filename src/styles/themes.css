@@ -1,0 +1,87 @@
+/* Custom Unlockable Themes */
+
+/* Hacker Theme */
+.theme-hacker {
+  --background: 120 100% 4%;
+  --foreground: 120 100% 50%;
+  --primary: 120 100% 40%;
+  --primary-foreground: 0 0% 0%;
+  --secondary: 120 100% 10%;
+  --secondary-foreground: 120 100% 50%;
+  --muted: 120 100% 15%;
+  --muted-foreground: 120 100% 50%;
+  --accent: 120 100% 20%;
+  --accent-foreground: 120 100% 50%;
+  --destructive: 0 100% 50%;
+  --destructive-foreground: 0 0% 100%;
+  --border: 120 100% 30%;
+  --input: 120 100% 20%;
+  --ring: 120 100% 50%;
+  --radius: 0rem;
+}
+.theme-hacker * {
+  font-family: 'Courier New', Courier, monospace !important;
+  border-radius: 0 !important;
+}
+
+/* Windows 98 Theme */
+.theme-win98 {
+  --background: 0 0% 75%;
+  --foreground: 0 0% 0%;
+  --primary: 240 100% 50%;
+  --primary-foreground: 0 0% 100%;
+  --secondary: 0 0% 85%;
+  --secondary-foreground: 0 0% 0%;
+  --muted: 0 0% 65%;
+  --muted-foreground: 0 0% 0%;
+  --accent: 0 0% 80%;
+  --accent-foreground: 0 0% 0%;
+  --destructive: 0 100% 40%;
+  --destructive-foreground: 0 0% 100%;
+  --border: 0 0% 50%;
+  --input: 0 0% 100%;
+  --ring: 240 100% 50%;
+  --radius: 0rem;
+}
+.theme-win98 * {
+  font-family: 'Tahoma', 'Segoe UI', sans-serif !important;
+}
+.theme-win98 .bg-card, .theme-win98 .bg-secondary, .theme-win98 button, .theme-win98 .p-4 {
+  border-top: 2px solid #fff !important;
+  border-left: 2px solid #fff !important;
+  border-bottom: 2px solid #808080 !important;
+  border-right: 2px solid #808080 !important;
+  border-radius: 0 !important;
+  background-color: #c0c0c0 !important;
+  box-shadow: none !important;
+}
+.theme-win98 .border-border {
+  border-color: #808080 !important;
+}
+
+/* Neon Dark Theme */
+.theme-neon-dark {
+  --background: 280 50% 5%;
+  --foreground: 300 100% 95%;
+  --primary: 320 100% 60%;
+  --primary-foreground: 0 0% 100%;
+  --secondary: 280 50% 15%;
+  --secondary-foreground: 300 100% 90%;
+  --muted: 280 50% 20%;
+  --muted-foreground: 300 50% 80%;
+  --accent: 180 100% 50%;
+  --accent-foreground: 0 0% 0%;
+  --destructive: 350 100% 60%;
+  --destructive-foreground: 0 0% 100%;
+  --border: 320 100% 60%;
+  --input: 280 50% 20%;
+  --ring: 180 100% 50%;
+  --radius: 1rem;
+}
+.theme-neon-dark .bg-card, .theme-neon-dark .bg-secondary {
+  box-shadow: 0 0 15px rgba(255, 0, 255, 0.2), inset 0 0 10px rgba(0, 255, 255, 0.1) !important;
+  border: 1px solid rgba(255, 0, 255, 0.5) !important;
+}
+.theme-neon-dark * {
+  text-shadow: 0 0 2px rgba(255, 255, 255, 0.2);
+}

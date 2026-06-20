@@ -44,6 +44,7 @@ import CatchColorGame from '@/components/CatchColorGame';
 import PartyGames from '@/components/PartyGames';
 import SimGate from '@/components/SimGate';
 import Game2048Viewer from '@/components/Game2048Viewer';
+import floralBg from '@/assets/floral-bg.jpg';
 
 interface GamesPageProps {
   points: number;
@@ -288,16 +289,21 @@ const GamesPage = ({ points, gamePoints, addPoints }: GamesPageProps) => {
 
   return (
     <div className="pb-4 space-y-4">
-      <div className="text-center mb-2">
-        <div className="w-16 h-16 rounded-2xl gradient-gaming flex items-center justify-center mx-auto mb-3 shadow-lg">
-          <Gamepad2 size={28} className="text-gaming-foreground" />
+      <div className="relative -mx-5 -mt-5 rounded-b-3xl overflow-hidden mb-4 bg-gradient-to-r from-orange-500 via-pink-500 to-rose-400 shadow-lg px-5 pt-8 pb-6 text-center">
+        <img src={floralBg} alt="" className="absolute inset-0 w-full h-full object-cover opacity-20 mix-blend-overlay pointer-events-none" />
+        <div className="relative z-10">
+          <div className="w-16 h-16 rounded-2xl bg-white/20 backdrop-blur-sm flex items-center justify-center mx-auto mb-3 shadow-sm border border-white/30">
+            <Gamepad2 size={28} className="text-white" />
+          </div>
+          <h2 className="text-2xl font-extrabold text-white mb-2">{t('gamingCenter')}</h2>
+          <p className="text-white/80 text-sm mb-4">
+            {lang === 'ar' ? 'الصعوبة تتكيّف تلقائياً مع مستواك 🔥' : 'Difficulty adapts to your level 🔥'}
+          </p>
+          <div className="text-white/90">
+            <GlobalLeaderboard currentPoints={gamePoints} section="games" />
+          </div>
         </div>
-        <h2 className="text-xl font-bold text-foreground">{t('gamingCenter')}</h2>
-        <p className="text-xs text-muted-foreground mt-1">
-          {lang === 'ar' ? 'الصعوبة تتكيّف تلقائياً مع مستواك 🔥' : 'Difficulty adapts to your level 🔥'}
-        </p>
       </div>
-      <GlobalLeaderboard currentPoints={gamePoints} section="games" />
       <div className="grid grid-cols-1 gap-3">
         {games.map(game => (
           <button key={game.id} onClick={() => setActiveGame(game.id)}

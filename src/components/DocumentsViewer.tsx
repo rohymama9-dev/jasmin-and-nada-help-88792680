@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Download, FileText, Image as ImageIcon, Search, ScanText, X } from 'lucide-react';
+import { Download, FileText, Image as ImageIcon, Search, ScanText, X, ZoomIn, ZoomOut, Eye, EyeOff } from 'lucide-react';
 import { useLang } from '@/contexts/LanguageContext';
 import { toast } from 'sonner';
 import {
@@ -26,6 +26,55 @@ type SearchResult = {
   snippet: string;
 };
 
+type DirectionalRun = {
+  text: string;
+  isArabic: boolean;
+};
+
+// Arabic character range regex
+const ARABIC_RE = /[\u0600-\u06FF\u0750-\u077F\u08A0-\u08FF\uFB50-\uFDFF\uFE70-\uFEFF]/;
+
+/**
+ * Strict physical separation: splits a line into runs where each run is
+ * EITHER purely Arabic OR purely Latin/technical text.
+ * Words from different scripts are NEVER combined in one run — each
+ * script-switch creates a new block, guaranteeing they render on separate lines.
+ */
+const splitIntoDirectionalRuns = (line: string): DirectionalRun[] => {
+  // Split into word-level tokens (preserve spaces as separators but don't include them in output)
+  const words = line.split(/\s+/).filter(w => w.length > 0);
+  const runs: DirectionalRun[] = [];
+  let currentText = '';
+  let currentIsArabic: boolean | null = null;
+
+  for (const word of words) {
+    const wordIsArabic = ARABIC_RE.test(word);
+
+    if (currentIsArabic === null) {
+      // First word
+      currentText = word;
+      currentIsArabic = wordIsArabic;
+    } else if (wordIsArabic === currentIsArabic) {
+      // Same script — append to current run with a space
+      currentText += ' ' + word;
+    } else {
+      // Script switch — flush current run and start new one
+      if (currentText.trim()) {
+        runs.push({ text: currentText.trim(), isArabic: currentIsArabic });
+      }
+      currentText = word;
+      currentIsArabic = wordIsArabic;
+    }
+  }
+
+  // Flush final run
+  if (currentText.trim()) {
+    runs.push({ text: currentText.trim(), isArabic: !!currentIsArabic });
+  }
+
+  return runs;
+};
+
 const DocumentsViewer = () => {
   const { lang } = useLang();
   const [docFile, setDocFile] = useState<File | null>(null);
@@ -43,6 +92,11 @@ const DocumentsViewer = () => {
   const [imageSize, setImageSize] = useState<{ width: number; height: number } | null>(null);
   const [ocrWords, setOcrWords] = useState<OcrWordBox[]>([]);
   const pageViewerRef = useRef<HTMLDivElement | null>(null);
+
+  // ── Previously missing state (this caused a ReferenceError that crashed
+  //    the whole component before any of the rendering logic below could run) ──
+  const [docFontSize, setDocFontSize] = useState<'small' | 'medium' | 'large'>('medium');
+  const [isOcrView, setIsOcrView] = useState(false);
 
   const t = (ar: string, en: string) => (lang === 'ar' ? ar : en);
 
@@ -68,6 +122,7 @@ const DocumentsViewer = () => {
     setPreviewUrl(null);
     setImageSize(null);
     setOcrWords([]);
+    setIsOcrView(false);
   }, [previewUrl, revokePreview]);
 
   const parseFile = useCallback(async (file: File) => {
@@ -78,6 +133,7 @@ const DocumentsViewer = () => {
     setActivePage(1);
     setOcrMessage(null);
     setOcrText('');
+    setIsOcrView(false);
 
     try {
       const parsed = await parseSupportedDocument(file);
@@ -214,6 +270,8 @@ const DocumentsViewer = () => {
     if (firstHit) firstHit.scrollIntoView({ behavior: 'smooth', block: 'center' });
   }, [activePage, searchQuery]);
 
+  // Highlights a search match within a single directional run (already
+  // guaranteed to be pure Arabic or pure non-Arabic text).
   const highlightText = useCallback((text: string, query: string) => {
     const normalizedQuery = normalizeWhitespace(query);
     if (!normalizedQuery) return text;
@@ -268,6 +326,9 @@ const DocumentsViewer = () => {
     URL.revokeObjectURL(url);
   }, [docFile, docText]);
 
+  const fontSizeClass = docFontSize === 'small' ? 'text-sm' : docFontSize === 'large' ? 'text-xl' : 'text-base';
+  const textToRender = isOcrView ? ocrText : activePageText;
+
   return (
     <div dir={lang === 'ar' ? 'rtl' : 'ltr'} className="space-y-4">
       <div className="rounded-3xl bg-gradient-to-br from-fuchsia-600 via-purple-600 to-violet-600 p-5 text-white text-center">
@@ -317,6 +378,7 @@ const DocumentsViewer = () => {
               onClick={downloadExtractedText}
               disabled={!docText}
               className="p-2 rounded-xl bg-primary text-primary-foreground disabled:opacity-50"
+              title={t('تحميل النص المستخرج', 'Download extracted text')}
             >
               <Download size={16} />
             </button>
@@ -382,9 +444,15 @@ const DocumentsViewer = () => {
                 </div>
               )}
               {ocrText && (
-                <div className="rounded-2xl border border-border bg-secondary/30 p-3 text-xs leading-relaxed whitespace-pre-wrap">
-                  {ocrText}
-                </div>
+                <button
+                  onClick={() => setIsOcrView(prev => !prev)}
+                  className="w-full flex items-center justify-center gap-2 rounded-2xl border border-border bg-secondary/30 p-2 text-xs font-bold hover:bg-secondary/50 transition-colors"
+                >
+                  {isOcrView ? <EyeOff size={14} /> : <Eye size={14} />}
+                  {isOcrView
+                    ? t('إخفاء نص الصورة والعودة لنص المستند', 'Hide image text and return to document text')
+                    : t('عرض نص الصورة (OCR) في الأسفل بدل نص الصفحة', 'Show the OCR image text below instead of the page text')}
+                </button>
               )}
             </div>
 
@@ -406,13 +474,20 @@ const DocumentsViewer = () => {
                   return (
                     <button
                       key={`${result.page}-${result.index}-${index}`}
-                      onClick={() => setActivePage(result.page)}
+                      onClick={() => { setActivePage(result.page); setIsOcrView(false); }}
                       className="w-full text-left rounded-2xl border border-border bg-card p-3 hover:bg-primary/5 transition"
                     >
                       <div className="text-[10px] text-primary font-bold mb-1">
                         {t('صفحة', 'Page')} {result.page} • #{result.index}
                       </div>
-                      <div className="text-sm text-foreground leading-relaxed">
+                      <div
+                        className="text-sm text-foreground leading-relaxed"
+                        style={
+                          /[\u0600-\u06FF]/.test(result.snippet)
+                            ? { direction: 'rtl', unicodeBidi: 'isolate', textAlign: 'right' }
+                            : { direction: 'ltr', textAlign: 'left' }
+                        }
+                      >
                         {before}
                         <span className="bg-yellow-300 dark:bg-yellow-700 px-1 rounded">{match}</span>
                         {after}
@@ -468,33 +543,87 @@ const DocumentsViewer = () => {
           {docPages.length > 0 && !docLoading && (
             <div className="space-y-2">
               <div className="flex items-center justify-between">
-                <p className="font-bold text-foreground text-sm">{t('عرض النص', 'Text Viewer')}</p>
+                <p className="font-bold text-foreground text-sm">
+                  {isOcrView ? t('نص الصورة (OCR)', 'Image Text (OCR)') : t('عرض النص', 'Text Viewer')}
+                </p>
                 <div className="flex items-center gap-2">
+                  {/* Font size controls */}
                   <button
-                    onClick={() => setActivePage(current => Math.max(1, current - 1))}
-                    disabled={activePage <= 1}
-                    className="px-2 py-1 rounded-lg bg-secondary text-xs font-bold disabled:opacity-50"
+                    onClick={() => setDocFontSize(s => (s === 'large' ? 'medium' : s === 'medium' ? 'small' : 'small'))}
+                    disabled={docFontSize === 'small'}
+                    className="p-1.5 rounded-lg bg-secondary disabled:opacity-40"
+                    title={t('تصغير الخط', 'Smaller text')}
                   >
-                    {t('السابق', 'Prev')}
+                    <ZoomOut size={14} />
                   </button>
-                  <span className="text-xs font-bold text-muted-foreground">
-                    {activePage}/{docPages.length}
-                  </span>
                   <button
-                    onClick={() => setActivePage(current => Math.min(docPages.length, current + 1))}
-                    disabled={activePage >= docPages.length}
-                    className="px-2 py-1 rounded-lg bg-secondary text-xs font-bold disabled:opacity-50"
+                    onClick={() => setDocFontSize(s => (s === 'small' ? 'medium' : s === 'medium' ? 'large' : 'large'))}
+                    disabled={docFontSize === 'large'}
+                    className="p-1.5 rounded-lg bg-secondary disabled:opacity-40"
+                    title={t('تكبير الخط', 'Larger text')}
                   >
-                    {t('التالي', 'Next')}
+                    <ZoomIn size={14} />
                   </button>
+
+                  {!isOcrView && (
+                    <>
+                      <button
+                        onClick={() => setActivePage(current => Math.max(1, current - 1))}
+                        disabled={activePage <= 1}
+                        className="px-2 py-1 rounded-lg bg-secondary text-xs font-bold disabled:opacity-50"
+                      >
+                        {t('السابق', 'Prev')}
+                      </button>
+                      <span className="text-xs font-bold text-muted-foreground">
+                        {activePage}/{docPages.length}
+                      </span>
+                      <button
+                        onClick={() => setActivePage(current => Math.min(docPages.length, current + 1))}
+                        disabled={activePage >= docPages.length}
+                        className="px-2 py-1 rounded-lg bg-secondary text-xs font-bold disabled:opacity-50"
+                      >
+                        {t('التالي', 'Next')}
+                      </button>
+                    </>
+                  )}
                 </div>
               </div>
 
               <div
                 ref={pageViewerRef}
-                className="max-h-[26rem] overflow-auto rounded-2xl border border-border bg-card p-4 text-sm leading-7 whitespace-pre-wrap"
+                className={`p-8 bg-white dark:bg-dark-100 rounded-lg shadow-sm border border-border min-h-[500px] font-sans text-foreground leading-relaxed ${fontSizeClass}`}
               >
-                {highlightText(activePageText, searchQuery)}
+                {(() => {
+                  if (!textToRender) return null;
+
+                  // Step 1: split into logical lines/paragraphs.
+                  const lines = textToRender.split('\n').filter(b => b.trim() !== '');
+
+                  return lines.map((line, lineIndex) => {
+                    // Step 2: within each line, split further into pure-Arabic /
+                    // pure-non-Arabic runs so the two scripts NEVER share a
+                    // visual line or text-direction.
+                    const runs = splitIntoDirectionalRuns(line);
+
+                    return (
+                      <div key={lineIndex} className="mb-4 w-full">
+                        {runs.map((run, runIndex) => (
+                          <div
+                            key={runIndex}
+                            dir={run.isArabic ? 'rtl' : 'ltr'}
+                            className={
+                              run.isArabic
+                                ? 'text-right w-full font-arabic'
+                                : 'text-left w-full font-sans text-emerald-700 dark:text-emerald-400'
+                            }
+                          >
+                            {searchQuery ? highlightText(run.text.trim(), searchQuery) : run.text.trim()}
+                          </div>
+                        ))}
+                      </div>
+                    );
+                  });
+                })()}
               </div>
             </div>
           )}
