@@ -331,7 +331,7 @@ const HomePage = ({ points, addPoints }: HomePageProps) => {
                 </button>
               </div>
               <button onClick={toggleLang} aria-label="Toggle Language"
-                className="w-10 h-10 rounded-full flex items-center justify-center shrink-0 p-2 overflow-hidden text-white hover:bg-white/10 transition-colors">
+                className="w-8 h-8 rounded-full flex items-center justify-center shrink-0 p-1 text-white hover:bg-white/10 transition-colors">
                 <Globe size={14} />
               </button>
               <button
@@ -344,7 +344,7 @@ const HomePage = ({ points, addPoints }: HomePageProps) => {
                   window.location.reload();
                 }}
                 aria-label={lang === 'ar' ? 'تسجيل الخروج' : 'Sign out'}
-                className="w-10 h-10 rounded-full flex items-center justify-center shrink-0 p-2 overflow-hidden text-white hover:bg-red-500/50 transition-colors">
+                className="w-8 h-8 rounded-full flex items-center justify-center shrink-0 p-1 text-white hover:bg-red-500/50 transition-colors">
                 <LogOut size={14} />
               </button>
             </div>

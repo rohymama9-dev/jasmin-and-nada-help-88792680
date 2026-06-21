@@ -229,7 +229,7 @@ const GlobalLeaderboard = ({ points, currentPoints, section = 'global' }: Global
   };
 
   return (
-    <div className="glass-card rounded-3xl p-5 border border-white/10 bg-white/10 shadow-xl shadow-black/5">
+    <div className="glass-card rounded-xl p-3 border border-white/10 bg-white/10 shadow-md">
       <div className="flex flex-col gap-4">
         <div>
           <div className="flex items-center gap-2 mb-2">
@@ -238,12 +238,12 @@ const GlobalLeaderboard = ({ points, currentPoints, section = 'global' }: Global
             </span>
             <span className="text-[10px] text-muted-foreground">{sectionTitle}</span>
           </div>
-          <h3 className="text-lg font-bold text-foreground">
+          <h3 className="text-sm font-bold text-foreground">
             {lang === 'ar'
               ? 'انضم إلى أفضل المنافسين'
               : 'Join the top competitor'}
           </h3>
-          <p className="text-sm text-muted-foreground mt-1">
+          <p className="text-[10px] text-muted-foreground mt-0.5 leading-tight">
             {lang === 'ar'
               ? 'أدخل اسم العرض ثم أرسل نقاطك الإجمالية ليظهر في اللوحة.'
               : 'Enter your display name and submit your total points to appear on the leaderboard.'}

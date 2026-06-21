@@ -304,32 +304,39 @@ const EducationPage = ({ points, educationPoints, addPoints }: Props) => {
           </div>
         </div>
       </div>
-      <div className="flex justify-center flex-wrap gap-2 mt-4 px-2">
-          <button
-            onClick={() => setActiveTab('math')}
-            className={`px-4 py-2 rounded-xl text-xs font-bold transition-all ${activeTab === 'math' ? 'gradient-primary text-white' : 'bg-secondary text-muted-foreground'}`}
-          >
-            {t('مختبر الرياضيات', 'Math Lab')}
-          </button>
-          <button
-            onClick={() => setActiveTab('dictation')}
-            className={`px-4 py-2 rounded-xl text-xs font-bold transition-all ${activeTab === 'dictation' ? 'gradient-primary text-white' : 'bg-secondary text-muted-foreground'}`}
-          >
-            {t('الإملاء والنطق', 'Dictation')}
-          </button>
-          <button
-            onClick={() => setActiveTab('grammarQuestions')}
-            className={`px-4 py-2 rounded-xl text-xs font-bold transition-all ${activeTab === 'grammarQuestions' ? 'gradient-primary text-white' : 'bg-secondary text-muted-foreground'}`}
-          >
-            {t('أسئلة قواعد', 'Grammar Questions')}
-          </button>
-          <button
-            onClick={() => setActiveTab('docs')}
-            className={`px-4 py-2 rounded-xl text-xs font-bold transition-all ${activeTab === 'docs' ? 'gradient-primary text-white' : 'bg-secondary text-muted-foreground'}`}
-          >
-            {t('أداة المستندات', 'Document Tool')}
-          </button>
-        </div>
+      <div className="grid grid-cols-2 gap-3 mt-4 px-3">
+        {/* Row 1: Grammar & Docs */}
+        <button
+          onClick={() => setActiveTab('grammarQuestions')}
+          className={`flex flex-col items-center justify-center gap-2 p-4 rounded-2xl transition-all shadow-sm ${activeTab === 'grammarQuestions' ? 'gradient-primary text-white scale-105 shadow-lg' : 'bg-secondary/80 hover:bg-secondary text-foreground'}`}
+        >
+          <span className="text-3xl">📝</span>
+          <span className="text-xs font-bold text-center">{t('أسئلة قواعد', 'Grammar')}</span>
+        </button>
+        <button
+          onClick={() => setActiveTab('docs')}
+          className={`flex flex-col items-center justify-center gap-2 p-4 rounded-2xl transition-all shadow-sm ${activeTab === 'docs' ? 'gradient-primary text-white scale-105 shadow-lg' : 'bg-secondary/80 hover:bg-secondary text-foreground'}`}
+        >
+          <span className="text-3xl">📄</span>
+          <span className="text-xs font-bold text-center">{t('أداة المستندات', 'Docs Tool')}</span>
+        </button>
+        
+        {/* Row 2: Math & Dictation */}
+        <button
+          onClick={() => setActiveTab('math')}
+          className={`flex flex-col items-center justify-center gap-2 p-4 rounded-2xl transition-all shadow-sm ${activeTab === 'math' ? 'gradient-primary text-white scale-105 shadow-lg' : 'bg-secondary/80 hover:bg-secondary text-foreground'}`}
+        >
+          <span className="text-3xl">🧮</span>
+          <span className="text-xs font-bold text-center">{t('مختبر الرياضيات', 'Math Lab')}</span>
+        </button>
+        <button
+          onClick={() => setActiveTab('dictation')}
+          className={`flex flex-col items-center justify-center gap-2 p-4 rounded-2xl transition-all shadow-sm ${activeTab === 'dictation' ? 'gradient-primary text-white scale-105 shadow-lg' : 'bg-secondary/80 hover:bg-secondary text-foreground'}`}
+        >
+          <span className="text-3xl">🗣️</span>
+          <span className="text-xs font-bold text-center">{t('الإملاء والنطق', 'Dictation')}</span>
+        </button>
+      </div>
 
 
       {activeTab === 'math' && (
@@ -353,6 +360,17 @@ const EducationPage = ({ points, educationPoints, addPoints }: Props) => {
           <div className="flex items-center justify-between">
             <h3 className="font-bold text-foreground text-sm">{t('أداة المستندات التعليمية', 'Education Document Tool')}</h3>
             <span className="text-[10px] text-muted-foreground font-semibold">{t('PDF أو TXT', 'PDF or TXT')}</span>
+          </div>
+
+          <div className="rounded-xl overflow-hidden bg-gradient-to-r from-amber-400 to-yellow-500 shadow-md p-3 flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div className="bg-white/20 p-2 rounded-lg backdrop-blur-sm">
+                <span className="text-xl">⚠️</span>
+              </div>
+              <p className="text-white text-xs font-black drop-shadow-sm leading-tight">
+                {lang === 'ar' ? 'ممتاز باللغة الإنجليزية، وما زال قيد التطوير لدعم اللغة العربية بشكل كامل.' : 'Excellent in English, still under development for full Arabic support.'}
+              </p>
+            </div>
           </div>
 
           {!docFile ? (

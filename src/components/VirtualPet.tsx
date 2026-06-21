@@ -249,11 +249,11 @@ export default function VirtualPet() {
 
           {/* Campfire */}
           <div className="flex flex-col items-center gap-1">
-            <div className={`text-5xl transition-all duration-500 ${fireLit ? 'drop-shadow-[0_0_12px_rgba(255,140,0,0.9)]' : 'grayscale opacity-60'}`}>
+            <div className={`text-5xl transition-all duration-500 ${fireLit ? 'drop-shadow-[0_0_20px_rgba(255,140,0,1)] animate-pulse' : 'grayscale opacity-40'}`}>
               {fireLit ? '🔥' : '🧊'}
             </div>
-            <div className={`text-[9px] font-bold px-2 py-0.5 rounded-full ${fireLit ? 'bg-orange-100 text-orange-700' : 'bg-blue-100 text-blue-700'}`}>
-              {fireLit ? t('دافئة ✓', 'Warm ✓') : t(`تحتاج ${100 - todayPoints} نقطة`, `Need ${100 - todayPoints} pts`)}
+            <div className={`text-[9px] font-bold px-2 py-1 rounded-lg text-center max-w-[120px] leading-tight ${fireLit ? 'bg-orange-100 text-orange-700' : 'bg-slate-200 text-slate-600'}`}>
+              {fireLit ? t('الشعلة دافئة! الدينو محمي 🔥', 'Warm! Dino is safe 🔥') : t(`اجمع 100 نقطة اليوم لتشعل الشعلة وتحمي الدينو (${todayPoints}/100)`, `Earn 100 pts today to light the fire (${todayPoints}/100)`)}
             </div>
           </div>
 

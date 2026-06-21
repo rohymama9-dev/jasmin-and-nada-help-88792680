@@ -362,10 +362,10 @@ const DocumentsViewer = () => {
             {t('يدعم DOCX و PDF و TXT و WebP وباقي الصور', 'Supports DOCX, PDF, TXT, WebP, and other images')}
           </p>
         </label>
-        {/* Disclaimer banner — styled like iOS install hint */}
-        <div className="relative mt-3 rounded-2xl overflow-hidden flex items-center gap-3 px-4 py-3 shadow-md bg-gradient-to-br from-amber-400 to-yellow-500">
-          <span className="text-2xl shrink-0">📝</span>
-          <p className="text-white font-bold text-sm leading-snug">
+        {/* Disclaimer banner — subtle warning style */}
+        <div className="mt-3 rounded-2xl border border-amber-300/60 bg-amber-50 dark:bg-amber-950/20 px-4 py-3 flex items-center gap-3 shadow-sm">
+          <span className="text-xl shrink-0">⚠️</span>
+          <p className="text-amber-900 dark:text-amber-200 font-bold text-xs leading-snug">
             ممتاز باللغة الإنجليزية، وما زال قيد التطوير لدعم اللغة العربية بشكل كامل.
           </p>
         </div>
@@ -373,9 +373,9 @@ const DocumentsViewer = () => {
       ) : (
         <div className="space-y-4">
           {/* Disclaimer banner when file loaded */}
-          <div className="relative rounded-2xl overflow-hidden flex items-center gap-3 px-4 py-3 shadow-md bg-gradient-to-br from-amber-400 to-yellow-500">
-            <span className="text-2xl shrink-0">📝</span>
-            <p className="text-white font-bold text-sm leading-snug">
+          <div className="rounded-2xl border border-amber-300/60 bg-amber-50 dark:bg-amber-950/20 px-4 py-3 flex items-center gap-3 shadow-sm">
+            <span className="text-xl shrink-0">⚠️</span>
+            <p className="text-amber-900 dark:text-amber-200 font-bold text-xs leading-snug">
               ممتاز باللغة الإنجليزية، وما زال قيد التطوير لدعم اللغة العربية بشكل كامل.
             </p>
           </div>
