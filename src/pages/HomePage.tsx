@@ -17,6 +17,7 @@ import floralBg from '@/assets/floral-bg.jpg';
 import { MonthlyWrapped } from '@/components/viral/MonthlyWrapped';
 import { ShareableResult } from '@/components/viral/ShareableResult';
 import VirtualPet from '@/components/VirtualPet';
+import TimeCapsule from '@/components/TimeCapsule';
 
 interface HomePageProps {
   points: number;
@@ -91,6 +92,68 @@ const HomePage = ({ points, addPoints }: HomePageProps) => {
       }
     }
   };
+
+  const getRPGTitle = (pts: number) => {
+    if (pts >= 5000) return lang === 'ar' ? 'أسطورة الإنجاز 👑' : 'Legend of Achievement 👑';
+    if (pts >= 2000) return lang === 'ar' ? 'سيد التركيز 🔮' : 'Focus Master 🔮';
+    if (pts >= 500) return lang === 'ar' ? 'مقاتل العادات ⚔️' : 'Habit Warrior ⚔️';
+    return lang === 'ar' ? 'مبتدئ يبحث عن الطريق 🌱' : 'Beginner Seeking the Path 🌱';
+  };
+
+  const [flashChallenge, setFlashChallenge] = useState<{ name: string, expires: number } | null>(null);
+  const [flashTimeLeft, setFlashTimeLeft] = useState('');
+
+  useEffect(() => {
+    const generateFlashChallenge = () => {
+      const now = Date.now();
+      if (Math.random() < 0.3) {
+        const challenges = [
+          { ar: 'العب لعبة الذاكرة', en: 'Play the Memory Game' },
+          { ar: 'اقرأ صفحة من القرآن', en: 'Read a page of Quran' },
+          { ar: 'اشرب كوبين من الماء', en: 'Drink 2 cups of water' },
+        ];
+        const selected = challenges[Math.floor(Math.random() * challenges.length)];
+        const expires = now + 2 * 60 * 60 * 1000;
+        const challenge = { name: lang === 'ar' ? selected.ar : selected.en, expires };
+        localStorage.setItem('flash_challenge', JSON.stringify(challenge));
+        setFlashChallenge(challenge);
+      }
+    };
+
+    try {
+      const saved = localStorage.getItem('flash_challenge');
+      const now = Date.now();
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (now < parsed.expires) {
+          setFlashChallenge(parsed);
+        } else {
+          localStorage.removeItem('flash_challenge');
+          generateFlashChallenge();
+        }
+      } else {
+        generateFlashChallenge();
+      }
+    } catch {}
+  }, [lang]);
+
+  useEffect(() => {
+    if (!flashChallenge) return;
+    const interval = setInterval(() => {
+      const now = Date.now();
+      const diff = flashChallenge.expires - now;
+      if (diff <= 0) {
+        setFlashChallenge(null);
+        localStorage.removeItem('flash_challenge');
+        clearInterval(interval);
+      } else {
+        const m = Math.floor(diff / 60000);
+        const s = Math.floor((diff % 60000) / 1000);
+        setFlashTimeLeft(`${m}:${s.toString().padStart(2, '0')}`);
+      }
+    }, 1000);
+    return () => clearInterval(interval);
+  }, [flashChallenge]);
 
   useEffect(() => {
     let active = true;
@@ -216,9 +279,17 @@ const HomePage = ({ points, addPoints }: HomePageProps) => {
                   {name ? `${lang === 'ar' ? 'مرحباً' : 'Welcome'} ${name}` : t('welcome')} 🌸
                 </h1>
               </div>
-              <div className="flex items-center gap-1.5 mt-1">
-                <p className="text-sm text-white/90">{t('dailyProgress')}</p>
-                <span className="px-2 py-0.5 rounded-full bg-success/20 text-success text-[10px] font-bold">
+              <div className="flex items-center gap-1.5 mt-1 flex-wrap">
+                <span className="px-2 py-0.5 rounded-full bg-white/20 text-white text-[10px] font-bold border border-white/30">
+                  {getRPGTitle(points)}
+                </span>
+                {streak >= 2 && (
+                  <div className="flex items-center gap-1 px-2 py-0.5 rounded-full bg-orange-500/20 text-orange-100 text-[10px] font-bold border border-orange-500/30" title={lang === 'ar' ? 'سلسلة الحضور' : 'Visit Streak'}>
+                    <span className="text-sm leading-none">🔥</span>
+                    <span>{streak}</span>
+                  </div>
+                )}
+                <span className="px-2 py-0.5 rounded-full bg-success/20 text-success text-[10px] font-bold border border-success/30">
                   {lang === 'ar' ? '✅ تم تسجيل الحضور' : '✅ Checked In'}
                 </span>
               </div>
@@ -226,7 +297,7 @@ const HomePage = ({ points, addPoints }: HomePageProps) => {
             <div className="flex items-center gap-2">
               <div className="relative">
                 <button onClick={() => setShowThemeMenu(!showThemeMenu)} aria-label="Theme Selector"
-                  className="p-1.5 rounded-full bg-secondary text-secondary-foreground hover:bg-secondary/80 transition-colors">
+                  className="w-10 h-10 flex items-center justify-center p-2 rounded-full bg-secondary text-secondary-foreground hover:bg-secondary/80 transition-colors">
                   <Palette size={14} />
                 </button>
                 {showThemeMenu && (
@@ -247,8 +318,8 @@ const HomePage = ({ points, addPoints }: HomePageProps) => {
                 )}
               </div>
               <button onClick={toggleLang}
-                className="px-3 py-1.5 rounded-full bg-secondary text-secondary-foreground text-xs font-semibold hover:bg-secondary/80 transition-colors">
-                {lang === 'ar' ? 'EN' : 'عربي'}
+                className="w-10 h-10 flex items-center justify-center p-2 rounded-full bg-secondary text-secondary-foreground text-[10px] font-bold hover:bg-secondary/80 transition-colors">
+                {lang === 'ar' ? 'EN' : 'AR'}
               </button>
               <button
                 onClick={() => {
@@ -260,20 +331,13 @@ const HomePage = ({ points, addPoints }: HomePageProps) => {
                   window.location.reload();
                 }}
                 aria-label={lang === 'ar' ? 'تسجيل الخروج' : 'Sign out'}
-                className="p-1.5 rounded-full bg-secondary text-secondary-foreground hover:bg-destructive/10 hover:text-destructive transition-colors">
+                className="w-10 h-10 flex items-center justify-center p-2 rounded-full bg-secondary text-secondary-foreground hover:bg-destructive/10 hover:text-destructive transition-colors">
                 <LogOut size={14} />
               </button>
             </div>
           </div>
           <div className="animate-in slide-in-from-left duration-500 flex items-center gap-2">
             <PointsBadge points={points} />
-            {/* Streak Badge */}
-            {streak >= 2 && (
-              <div className="flex items-center gap-1 px-3 py-1.5 rounded-full bg-orange-500/20 text-orange-100 text-[11px] font-bold border border-orange-500/30 backdrop-blur-sm" title={lang === 'ar' ? 'سلسلة الحضور' : 'Visit Streak'}>
-                <span className="text-sm">🔥</span>
-                <span>{streak}</span>
-              </div>
-            )}
             {/* Monthly Wrapped trigger */}
             <button
               onClick={() => setShowWrapped(true)}
@@ -314,12 +378,31 @@ const HomePage = ({ points, addPoints }: HomePageProps) => {
         </div>
       )}
 
-      {/* ── Dashboard Widgets ── */}
-      <div className="space-y-6 flex flex-col pt-2">
-        {visibleWidgets.map(id => (
-          <div key={id} id={id}>
-            {WIDGETS_MAP[id]}
+      {/* Flash Challenge Banner */}
+      {flashChallenge && (
+        <div className="mx-1 p-3 rounded-2xl bg-gradient-to-r from-yellow-500 to-amber-500 text-white shadow-lg animate-bounce-in flex justify-between items-center relative overflow-hidden">
+          <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/cubes.png')] opacity-10"></div>
+          <div className="relative z-10">
+            <p className="text-[10px] font-black uppercase tracking-wider text-yellow-100">{lang === 'ar' ? '⚡ تحدي مفاجئ!' : '⚡ Flash Challenge!'}</p>
+            <p className="font-bold text-sm leading-tight mt-0.5">{flashChallenge.name}</p>
           </div>
+          <div className="relative z-10 shrink-0 bg-black/20 px-2 py-1 rounded-lg text-center">
+            <p className="text-[9px] uppercase font-bold text-yellow-100">{lang === 'ar' ? 'ينتهي في' : 'Ends in'}</p>
+            <p className="text-sm font-black font-mono">{flashTimeLeft}</p>
+          </div>
+        </div>
+      )}
+
+      {/* Virtual Pet */}
+      <VirtualPet />
+
+      {/* Time Capsule */}
+      <TimeCapsule />
+
+      {/* Main Widgets */}
+      <div className="space-y-4">
+        {visibleWidgets.map((wKey) => (
+          <div key={wKey}>{WIDGETS_MAP[wKey]}</div>
         ))}
       </div>
 

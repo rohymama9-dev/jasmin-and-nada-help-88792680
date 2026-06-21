@@ -14,6 +14,7 @@ interface PetData {
   seedsOwned: number;
   petHunger: number;
   lastFedDate: string | null;
+  isSick?: boolean;
 }
 
 const DINO_EMOJIS = ['🦖', '🦕', '🐉', '🦎'];
@@ -44,25 +45,37 @@ export default function VirtualPet() {
     };
   });
 
-  // Calculate hunger decay
+  // Calculate hunger decay and sickness
   useEffect(() => {
     if (petData.state !== 'hatched') return;
     
+    let isSick = petData.isSick;
+    try {
+      const lastHabitStr = localStorage.getItem('combo-habit-today');
+      if (lastHabitStr) {
+        const diffTime = Math.abs(new Date().getTime() - new Date(lastHabitStr).getTime());
+        const diffHours = diffTime / (1000 * 60 * 60);
+        if (diffHours > 48 && !isSick) {
+          isSick = true;
+        }
+      }
+    } catch {}
+
     const today = new Date().toDateString();
+    let newHunger = petData.petHunger;
+    let newLastFedDate = petData.lastFedDate;
+
     if (petData.lastFedDate && petData.lastFedDate !== today) {
-      // Decode days since last fed
       const diffTime = Math.abs(new Date().getTime() - new Date(petData.lastFedDate).getTime());
       const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-      
-      const newHunger = Math.max(0, petData.petHunger - (diffDays * 20));
-      
-      if (newHunger !== petData.petHunger) {
-        const newData = { ...petData, petHunger: newHunger, lastFedDate: today };
-        setPetData(newData);
-        localStorage.setItem('dino_pet_state', JSON.stringify(newData));
-      }
+      newHunger = Math.max(0, petData.petHunger - (diffDays * 20));
+      newLastFedDate = today;
     } else if (!petData.lastFedDate) {
-      const newData = { ...petData, lastFedDate: today };
+      newLastFedDate = today;
+    }
+
+    if (newHunger !== petData.petHunger || newLastFedDate !== petData.lastFedDate || isSick !== petData.isSick) {
+      const newData = { ...petData, petHunger: newHunger, lastFedDate: newLastFedDate, isSick };
       setPetData(newData);
       localStorage.setItem('dino_pet_state', JSON.stringify(newData));
     }
@@ -125,6 +138,10 @@ export default function VirtualPet() {
   };
 
   const feedPet = () => {
+    if (petData.isSick) {
+      toast.error(t('الديناصور مريض، لن يأكل حتى تعالجه!', 'Dino is sick, won\'t eat until cured!'));
+      return;
+    }
     if (petData.seedsOwned > 0) {
       if (petData.petHunger >= 100) {
         toast(t('ديناصورك شبعان بالفعل!', 'Your dino is already full!'));
@@ -138,6 +155,17 @@ export default function VirtualPet() {
       toast.success(t('يم يم! الديناصور سعيد', 'Yum yum! Dino is happy'));
     } else {
       toast.error(t('لا تملك بذور كافية، اشترِ المزيد!', 'Not enough seeds, buy more!'));
+    }
+  };
+
+  const buyMedicine = () => {
+    if (points >= 100) {
+      addPoints(-100);
+      setPetData(prev => ({ ...prev, isSick: false }));
+      toast.success(t('تم علاج الديناصور! 💊', 'Dino is cured! 💊'));
+      localStorage.setItem('combo-habit-today', new Date().toDateString());
+    } else {
+      toast.error(t('تحتاج إلى 100 نقطة لشراء الدواء', 'You need 100 points to buy medicine'));
     }
   };
 
@@ -236,14 +264,28 @@ export default function VirtualPet() {
       <div className="flex items-center gap-6">
         {/* Dino Avatar */}
         <div className="relative shrink-0 w-24 h-24 flex items-center justify-center bg-white/40 dark:bg-black/20 rounded-3xl shadow-inner border border-emerald-100/50 dark:border-emerald-800/50 group">
-          <div 
-            className="text-6xl drop-shadow-xl animate-[bounce_3s_infinite] group-hover:scale-110 transition-transform cursor-pointer"
-            style={{ filter: `hue-rotate(${dinoColor})` }}
-            onClick={() => toast(t('الديناصور يحبك!', 'Dino loves you!'), { icon: '💖' })}
-          >
-            {dinoEmoji}
-          </div>
-          {petData.petHunger < 30 && (
+          {petData.isSick ? (
+            <div 
+              className="text-6xl drop-shadow-xl animate-pulse group-hover:scale-110 transition-transform cursor-pointer grayscale opacity-80"
+              onClick={() => toast.error(t('الديناصور مريض بسبب إهمالك! اشترِ له الدواء فوراً.', 'Dino is sick from neglect! Buy medicine now.'), { icon: '🤒' })}
+            >
+              🤒
+            </div>
+          ) : (
+            <div 
+              className="text-6xl drop-shadow-xl animate-[bounce_3s_infinite] group-hover:scale-110 transition-transform cursor-pointer"
+              style={{ filter: `hue-rotate(${dinoColor})` }}
+              onClick={() => toast(t('الديناصور يحبك!', 'Dino loves you!'), { icon: '💖' })}
+            >
+              {dinoEmoji}
+            </div>
+          )}
+          {petData.isSick && (
+            <div className="absolute -top-2 -right-2 bg-purple-600 text-white text-[10px] px-2 py-0.5 rounded-full animate-pulse font-bold shadow-sm">
+              {t('مريض!', 'Sick!')}
+            </div>
+          )}
+          {!petData.isSick && petData.petHunger < 30 && (
             <div className="absolute -top-2 -right-2 bg-destructive text-white text-[10px] px-2 py-0.5 rounded-full animate-pulse font-bold shadow-sm">
               {t('جائع!', 'Hungry!')}
             </div>
@@ -259,31 +301,46 @@ export default function VirtualPet() {
             </div>
             <div className="h-2 w-full bg-emerald-200/50 dark:bg-emerald-900/50 rounded-full overflow-hidden">
               <div 
-                className={`h-full rounded-full transition-all duration-500 ${petData.petHunger < 30 ? 'bg-red-500' : 'bg-emerald-500'}`}
+                className={`h-full rounded-full transition-all duration-500 ${petData.isSick ? 'bg-purple-500' : petData.petHunger < 30 ? 'bg-red-500' : 'bg-emerald-500'}`}
                 style={{ width: `${petData.petHunger}%` }}
               />
             </div>
           </div>
           
-          <div className="flex gap-2">
-            <button 
-              onClick={feedPet}
-              className="flex-1 flex flex-col items-center justify-center gap-1 bg-emerald-500 text-white rounded-xl py-2 px-1 hover:bg-emerald-600 active:scale-95 transition-all shadow-sm"
-            >
-              <Wheat size={16} />
-              <span className="text-[10px] font-bold">{t('إطعام (', 'Feed (')}{petData.seedsOwned}{t(')', ')')}</span>
-            </button>
-            <button 
-              onClick={buySeed}
-              className="flex-1 flex flex-col items-center justify-center gap-1 bg-white dark:bg-emerald-900 text-emerald-700 dark:text-emerald-100 rounded-xl py-2 px-1 hover:bg-emerald-50 dark:hover:bg-emerald-800 active:scale-95 transition-all border border-emerald-200 dark:border-emerald-800 shadow-sm"
-            >
-              <div className="flex items-center gap-1">
-                <Sparkles size={12} className="text-yellow-500" />
-                <span className="text-[10px] font-bold">50</span>
-              </div>
-              <span className="text-[10px] font-bold">{t('شراء بذرة', 'Buy Seed')}</span>
-            </button>
-          </div>
+          {petData.isSick ? (
+            <div className="flex gap-2">
+              <button 
+                onClick={buyMedicine}
+                className="flex-1 flex flex-col items-center justify-center gap-1 bg-purple-500 text-white rounded-xl py-2 px-1 hover:bg-purple-600 active:scale-95 transition-all shadow-sm"
+              >
+                <div className="flex items-center gap-1">
+                  <Sparkles size={12} className="text-yellow-300" />
+                  <span className="text-[10px] font-bold">100</span>
+                </div>
+                <span className="text-[10px] font-bold">{t('شراء دواء', 'Buy Medicine')}</span>
+              </button>
+            </div>
+          ) : (
+            <div className="flex gap-2">
+              <button 
+                onClick={feedPet}
+                className="flex-1 flex flex-col items-center justify-center gap-1 bg-emerald-500 text-white rounded-xl py-2 px-1 hover:bg-emerald-600 active:scale-95 transition-all shadow-sm"
+              >
+                <Wheat size={16} />
+                <span className="text-[10px] font-bold">{t('إطعام (', 'Feed (')}{petData.seedsOwned}{t(')', ')')}</span>
+              </button>
+              <button 
+                onClick={buySeed}
+                className="flex-1 flex flex-col items-center justify-center gap-1 bg-white dark:bg-emerald-900 text-emerald-700 dark:text-emerald-100 rounded-xl py-2 px-1 hover:bg-emerald-50 dark:hover:bg-emerald-800 active:scale-95 transition-all border border-emerald-200 dark:border-emerald-800 shadow-sm"
+              >
+                <div className="flex items-center gap-1">
+                  <Sparkles size={12} className="text-yellow-500" />
+                  <span className="text-[10px] font-bold">50</span>
+                </div>
+                <span className="text-[10px] font-bold">{t('شراء بذرة', 'Buy Seed')}</span>
+              </button>
+            </div>
+          )}
         </div>
       </div>
     </div>
