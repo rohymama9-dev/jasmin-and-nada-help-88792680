@@ -320,27 +320,15 @@ const HomePage = ({ points, addPoints }: HomePageProps) => {
               </div>
             </div>
             <div className="flex items-center gap-1">
-              <div className="relative">
-                <button onClick={() => setShowThemeMenu(!showThemeMenu)} aria-label="Theme Selector"
-                  className="w-10 h-10 rounded-full flex items-center justify-center shrink-0 p-2 overflow-hidden text-white hover:bg-white/10 transition-colors">
-                  {theme === 'light' ? <Sun size={14} /> : theme === 'dark' ? <Moon size={14} /> : <Palette size={14} />}
+              <div className="flex items-center gap-1 bg-black/10 rounded-full p-0.5">
+                <button onClick={() => setTheme('light')} aria-label="Light Mode"
+                  className={`w-8 h-8 rounded-full flex items-center justify-center shrink-0 p-1 transition-colors ${theme !== 'dark' ? 'bg-white text-orange-500 shadow-sm' : 'text-white hover:bg-white/10'}`}>
+                  <Sun size={14} />
                 </button>
-                {showThemeMenu && (
-                  <div className="absolute top-full mt-2 right-0 bg-background border border-border rounded-lg shadow-xl p-2 flex flex-col gap-1 z-50 min-w-[150px]">
-                    <div className="text-[10px] font-bold text-muted-foreground uppercase px-2 pb-1 border-b border-border/50">{t('المظهر', 'Theme')}</div>
-                    <button onClick={() => { setTheme('light'); setShowThemeMenu(false); }} className={`text-left text-sm p-2 rounded hover:bg-secondary ${theme === 'light' ? 'bg-secondary font-bold' : ''}`}>Light</button>
-                    <button onClick={() => { setTheme('dark'); setShowThemeMenu(false); }} className={`text-left text-sm p-2 rounded hover:bg-secondary ${theme === 'dark' ? 'bg-secondary font-bold' : ''}`}>Dark</button>
-                    <button onClick={() => { setTheme('hacker'); setShowThemeMenu(false); }} className={`text-left text-sm p-2 rounded hover:bg-secondary ${theme === 'hacker' ? 'bg-secondary font-bold' : ''}`}>Hacker 🟩</button>
-                    <button onClick={() => { setTheme('win98'); setShowThemeMenu(false); }} className={`text-left text-sm p-2 rounded hover:bg-secondary ${theme === 'win98' ? 'bg-secondary font-bold' : ''}`}>Win 98 🪟</button>
-                    <button onClick={() => { setTheme('neon-dark'); setShowThemeMenu(false); }} className={`text-left text-sm p-2 rounded hover:bg-secondary ${theme === 'neon-dark' ? 'bg-secondary font-bold' : ''}`}>Neon 💜</button>
-                    
-                    <div className="text-[10px] font-bold text-muted-foreground uppercase px-2 pt-2 pb-1 mt-1 border-t border-border/50">{t('إعدادات إضافية', 'Extras')}</div>
-                    <button onClick={() => { toggleSavageMode(); setShowThemeMenu(false); }} className={`flex justify-between items-center text-left text-sm p-2 rounded hover:bg-red-500/10 hover:text-red-500 transition-colors ${savageMode ? 'text-red-500 font-bold bg-red-500/10' : ''}`}>
-                      <span>{lang === 'ar' ? 'الوضع الساخر' : 'Savage Mode'}</span>
-                      <Skull size={14} />
-                    </button>
-                  </div>
-                )}
+                <button onClick={() => setTheme('dark')} aria-label="Dark Mode"
+                  className={`w-8 h-8 rounded-full flex items-center justify-center shrink-0 p-1 transition-colors ${theme === 'dark' ? 'bg-slate-800 text-blue-300 shadow-sm' : 'text-white hover:bg-black/20'}`}>
+                  <Moon size={14} />
+                </button>
               </div>
               <button onClick={toggleLang} aria-label="Toggle Language"
                 className="w-10 h-10 rounded-full flex items-center justify-center shrink-0 p-2 overflow-hidden text-white hover:bg-white/10 transition-colors">
@@ -405,25 +393,31 @@ const HomePage = ({ points, addPoints }: HomePageProps) => {
 
       {/* Flash Challenge Banner */}
       {flashChallenge && (
-        <div className="mx-1 p-3 rounded-2xl bg-gradient-to-r from-yellow-500 to-amber-500 text-white shadow-lg animate-bounce-in flex justify-between items-center relative overflow-hidden">
+        <div className={`mx-1 p-3 rounded-2xl text-white shadow-lg flex justify-between items-center relative overflow-hidden transition-all duration-500 ${localStorage.getItem('flash_completed') === flashChallenge.name ? 'bg-emerald-500 opacity-90' : 'bg-gradient-to-r from-yellow-500 to-amber-500 animate-bounce-in'}`}>
           <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/cubes.png')] opacity-10"></div>
           <div className="relative z-10 flex-1">
-            <p className="text-[10px] font-black uppercase tracking-wider text-yellow-100">{lang === 'ar' ? '⚡ تحدي مفاجئ!' : '⚡ Flash Challenge!'}</p>
+            <p className="text-[10px] font-black uppercase tracking-wider text-white/90">{lang === 'ar' ? '⚡ تحدي مفاجئ!' : '⚡ Flash Challenge!'}</p>
             <p className="font-bold text-sm leading-tight mt-0.5">{flashChallenge.name}</p>
-            <button 
-              onClick={() => {
-                 addPoints(70);
-                 localStorage.removeItem('flash_challenge');
-                 setFlashChallenge(null);
-                 toast.success(lang === 'ar' ? 'أنجزت التحدي! +70 نقطة 🎉' : 'Challenge completed! +70 points 🎉');
-              }}
-              className="mt-2 bg-white text-amber-600 text-[10px] font-bold px-3 py-1 rounded-full hover:bg-yellow-50 transition-colors shadow-sm"
-            >
-              {lang === 'ar' ? 'أكملت التحدي (70+ نقطة)' : 'Completed (+70 pts)'}
-            </button>
+            {localStorage.getItem('flash_completed') === flashChallenge.name ? (
+              <div className="mt-2 text-white text-[10px] font-bold px-3 py-1 rounded-full bg-black/20 inline-block">
+                {lang === 'ar' ? '✅ اكتملت المهمة (تم أخذ النقاط)' : '✅ Completed (Points claimed)'}
+              </div>
+            ) : (
+              <button 
+                onClick={() => {
+                   addPoints(70);
+                   localStorage.setItem('flash_completed', flashChallenge.name);
+                   setFlashChallenge({ ...flashChallenge }); // force re-render
+                   toast.success(lang === 'ar' ? 'أنجزت التحدي! +70 نقطة 🎉' : 'Challenge completed! +70 points 🎉');
+                }}
+                className="mt-2 bg-white text-amber-600 text-[10px] font-bold px-3 py-1 rounded-full hover:bg-yellow-50 transition-colors shadow-sm"
+              >
+                {lang === 'ar' ? 'أكملت التحدي (70+ نقطة)' : 'Completed (+70 pts)'}
+              </button>
+            )}
           </div>
           <div className="relative z-10 shrink-0 bg-black/20 px-2 py-1 rounded-lg text-center ml-2">
-            <p className="text-[9px] uppercase font-bold text-yellow-100">{lang === 'ar' ? 'ينتهي في' : 'Ends in'}</p>
+            <p className="text-[9px] uppercase font-bold text-white/90">{lang === 'ar' ? 'ينتهي في' : 'Ends in'}</p>
             <p className="text-sm font-black font-mono">{flashTimeLeft}</p>
           </div>
         </div>

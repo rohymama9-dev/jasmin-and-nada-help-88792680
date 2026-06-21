@@ -93,10 +93,10 @@ export default function VirtualPet() {
     prevPointsRef.current = points;
   }, [points]);
 
-  // Egg progress: each 10 global points = +1 incubation progress (capped at 100)
+  // Egg progress: each 5 global points = +1 incubation progress (capped at 100)
   useEffect(() => {
     if (petData.state !== 'incubating') return;
-    const derived = Math.min(100, Math.floor(points / 10));
+    const derived = Math.min(100, Math.floor(points / 5));
     if (derived !== petData.incubationProgress) {
       setPetData(prev => {
         if (prev.state !== 'incubating') return prev;
@@ -201,56 +201,14 @@ export default function VirtualPet() {
     toast.success(t('تم علاج الدينو! 💊', 'Dino cured! 💊'));
   };
 
-  // ── EGG SELECTION ──
-  if (petData.state === 'egg_selection') {
-    return (
-      <div className="rounded-3xl overflow-hidden border-4 border-blue-300 bg-gradient-to-b from-blue-200 to-slate-100 p-6 mx-1">
-        <h3 className="font-extrabold text-xl text-center text-blue-900 mb-1">{t('اختر بيضتك', 'Choose Your Egg')}</h3>
-        <p className="text-center text-sm text-blue-700 font-medium mb-6">{t('ستكبر مع نقاطك...', 'It will grow with your points...')}</p>
-        <div className="flex justify-center gap-6">
-          {[1, 2, 3].map(num => (
-            <button key={num} onClick={() => selectEgg(num)}
-              className="text-6xl hover:scale-110 active:scale-95 transition-transform drop-shadow-md cursor-pointer animate-pulse"
-              style={{ filter: `hue-rotate(${num * 80}deg)` }}>
-              🥚
-            </button>
-          ))}
-        </div>
-        <p className="text-center text-xs text-blue-600 mt-4 font-bold">{t('كل 10 نقاط = تقدم في الفقس', 'Every 10 pts = hatching progress')}</p>
-      </div>
-    );
-  }
+  const p = petData.incubationProgress;
+  let eggEmoji = '🥚';
+  if (p >= 90) eggEmoji = '🐣';
+  else if (p >= 70) eggEmoji = '🥚';
+  else if (p >= 40) eggEmoji = '🥚';
+  const bounceClass = p >= 80 ? 'animate-bounce' : p >= 40 ? 'animate-pulse' : '';
+  const crackFilter = p >= 70 ? 'contrast(1.3) saturate(1.5)' : p >= 40 ? 'contrast(1.15)' : undefined;
 
-  // ── INCUBATING ──
-  if (petData.state === 'incubating') {
-    const p = petData.incubationProgress;
-    const eggEmoji = p >= 80 ? '🐣' : '🥚';
-    const bounceClass = p >= 80 ? 'animate-bounce' : p >= 40 ? 'animate-pulse' : '';
-    return (
-      <div className="rounded-3xl overflow-hidden border-4 border-amber-300 bg-gradient-to-b from-amber-100 to-orange-50 p-6 mx-1">
-        <h3 className="font-extrabold text-xl text-center text-amber-900 mb-4">{t('البيضة تحتضن...', 'Egg Incubating...')}</h3>
-        <div className="flex flex-col items-center gap-4">
-          <div className={`text-8xl drop-shadow-xl ${bounceClass}`}
-            style={{ filter: `hue-rotate(${(petData.selectedEgg || 1) * 80}deg)` }}>
-            {eggEmoji}
-          </div>
-          <div className="w-full max-w-xs">
-            <div className="flex justify-between text-xs font-bold text-amber-800 mb-1">
-              <span>{t('التقدم', 'Progress')}: {p}/100</span>
-              <span>{t(`كل 10 نقاط تقدم`, `Every 10 pts = progress`)}</span>
-            </div>
-            <div className="h-4 w-full bg-amber-200 rounded-full overflow-hidden border border-amber-300">
-              <div className="h-full bg-gradient-to-r from-amber-400 to-orange-500 rounded-full transition-all duration-700"
-                style={{ width: `${p}%` }} />
-            </div>
-            <p className="text-center text-xs text-amber-700 mt-2 font-bold">{t(`نقاطك الحالية: ${points}`, `Your pts: ${points}`)}</p>
-          </div>
-        </div>
-      </div>
-    );
-  }
-
-  // ── HATCHED: FULL ENVIRONMENT ──
   const dinoEmoji = DINO_EMOJIS[(petData.dinoType || 0) % DINO_EMOJIS.length];
   const dinoHue = HUE_ROTATES[(petData.dinoType || 0) % HUE_ROTATES.length];
   const fireLit = todayPoints >= 100;
@@ -299,33 +257,69 @@ export default function VirtualPet() {
             </div>
           </div>
 
-          {/* Pet Dino */}
+          {/* Pet Dino or Egg */}
           <div className="flex flex-col items-center relative">
-            {petData.isSick && (
-              <div className="absolute -top-3 -right-3 bg-purple-600 text-white text-[9px] font-bold px-1.5 py-0.5 rounded-full animate-pulse z-20">
-                {t('مريض!', 'Sick!')}
+            {petData.state === 'egg_selection' && (
+              <div className="flex justify-center gap-2 mb-4">
+                {[1, 2, 3].map(num => (
+                  <button key={num} onClick={() => selectEgg(num)}
+                    className="text-4xl hover:scale-110 active:scale-95 transition-transform drop-shadow-md cursor-pointer animate-pulse"
+                    style={{ filter: `hue-rotate(${num * 80}deg)` }}>
+                    🥚
+                  </button>
+                ))}
               </div>
             )}
-            {!petData.isSick && !fireLit && (
-              <div className="absolute -top-3 -left-3 z-20">
-                <Snowflake size={16} className="text-blue-500 animate-pulse" />
+            
+            {petData.state === 'incubating' && (
+              <div className="relative mb-2">
+                <div className={`text-6xl drop-shadow-xl ${bounceClass} transition-all duration-300`}
+                  style={{ filter: `hue-rotate(${(petData.selectedEgg || 1) * 80}deg)${crackFilter ? ` ${crackFilter}` : ''}` }}>
+                  {eggEmoji}
+                </div>
+                {p >= 40 && p < 90 && (
+                  <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+                    <span className="text-2xl opacity-40 font-black text-amber-800" style={{textShadow:'0 0 8px orange'}}>{p >= 70 ? '🐥🐥' : '🐥'}</span>
+                  </div>
+                )}
+                <div className="absolute -bottom-4 left-1/2 -translate-x-1/2 w-20 text-center">
+                  <div className="text-[9px] font-bold text-amber-900 bg-white/60 px-1 rounded-full mb-0.5">{p}/100</div>
+                  <div className="h-1.5 w-full bg-white/40 rounded-full overflow-hidden border border-white/60">
+                    <div className="h-full bg-amber-500 rounded-full transition-all" style={{ width: `${p}%` }} />
+                  </div>
+                </div>
               </div>
             )}
-            {!petData.isSick && petData.petHunger < 30 && (
-              <div className="absolute -top-3 -right-3 bg-red-500 text-white text-[9px] font-bold px-1.5 py-0.5 rounded-full animate-pulse z-20">
-                {t('جائع!', 'Hungry!')}
-              </div>
+
+            {petData.state === 'hatched' && (
+              <>
+                {petData.isSick && (
+                  <div className="absolute -top-3 -right-3 bg-purple-600 text-white text-[9px] font-bold px-1.5 py-0.5 rounded-full animate-pulse z-20">
+                    {t('مريض!', 'Sick!')}
+                  </div>
+                )}
+                {!petData.isSick && !fireLit && (
+                  <div className="absolute -top-3 -left-3 z-20">
+                    <Snowflake size={16} className="text-blue-500 animate-pulse" />
+                  </div>
+                )}
+                {!petData.isSick && petData.petHunger < 30 && (
+                  <div className="absolute -top-3 -right-3 bg-red-500 text-white text-[9px] font-bold px-1.5 py-0.5 rounded-full animate-pulse z-20">
+                    {t('جائع!', 'Hungry!')}
+                  </div>
+                )}
+                <div
+                  className={`text-7xl drop-shadow-2xl cursor-pointer transition-all ${petData.isSick ? 'grayscale opacity-70 animate-pulse' : 'animate-[bounce_3s_ease-in-out_infinite]'}`}
+                  style={{ filter: petData.isSick ? undefined : `hue-rotate(${dinoHue})` }}
+                  onClick={() => {
+                    if (petData.isSick) toast.error(t('الدينو مريض! اشترِ دواء.', 'Dino sick! Buy medicine.'), { icon: '🤒' });
+                    else toast(t('الدينو يحبك! 💖', 'Dino loves you! 💖'));
+                  }}
+                >
+                  {petData.isSick ? '🤒' : dinoEmoji}
+                </div>
+              </>
             )}
-            <div
-              className={`text-7xl drop-shadow-2xl cursor-pointer transition-all ${petData.isSick ? 'grayscale opacity-70 animate-pulse' : 'animate-[bounce_3s_ease-in-out_infinite]'}`}
-              style={{ filter: petData.isSick ? undefined : `hue-rotate(${dinoHue})` }}
-              onClick={() => {
-                if (petData.isSick) toast.error(t('الدينو مريض! اشترِ دواء.', 'Dino sick! Buy medicine.'), { icon: '🤒' });
-                else toast(t('الدينو يحبك! 💖', 'Dino loves you! 💖'));
-              }}
-            >
-              {petData.isSick ? '🤒' : dinoEmoji}
-            </div>
           </div>
 
           {/* Plant patch */}

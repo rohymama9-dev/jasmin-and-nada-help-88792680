@@ -362,11 +362,23 @@ const DocumentsViewer = () => {
             {t('يدعم DOCX و PDF و TXT و WebP وباقي الصور', 'Supports DOCX, PDF, TXT, WebP, and other images')}
           </p>
         </label>
-        <div className="bg-yellow-100 text-yellow-800 p-3 mt-4 rounded text-center font-bold">ممتاز باللغة الإنجليزية، وما زال قيد التطوير لدعم اللغة العربية بشكل كامل.</div>
+        {/* Disclaimer banner — styled like iOS install hint */}
+        <div className="relative mt-3 rounded-2xl overflow-hidden flex items-center gap-3 px-4 py-3 shadow-md bg-gradient-to-br from-amber-400 to-yellow-500">
+          <span className="text-2xl shrink-0">📝</span>
+          <p className="text-white font-bold text-sm leading-snug">
+            ممتاز باللغة الإنجليزية، وما زال قيد التطوير لدعم اللغة العربية بشكل كامل.
+          </p>
+        </div>
       </div>
       ) : (
         <div className="space-y-4">
-          <div className="bg-yellow-100 text-yellow-800 p-3 rounded text-center font-bold">ممتاز باللغة الإنجليزية، وما زال قيد التطوير لدعم اللغة العربية بشكل كامل.</div>
+          {/* Disclaimer banner when file loaded */}
+          <div className="relative rounded-2xl overflow-hidden flex items-center gap-3 px-4 py-3 shadow-md bg-gradient-to-br from-amber-400 to-yellow-500">
+            <span className="text-2xl shrink-0">📝</span>
+            <p className="text-white font-bold text-sm leading-snug">
+              ممتاز باللغة الإنجليزية، وما زال قيد التطوير لدعم اللغة العربية بشكل كامل.
+            </p>
+          </div>
           <div className="flex items-center gap-3 bg-secondary/60 rounded-2xl p-3 border border-border">
             <div className="w-14 h-14 rounded-xl bg-purple-100 dark:bg-purple-900/40 flex items-center justify-center text-2xl flex-shrink-0">
               {previewUrl ? <ImageIcon size={24} className="text-purple-600" /> : <FileText size={24} className="text-purple-600" />}
