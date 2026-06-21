@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { triggerConfetti } from '@/lib/audio';
 
 interface MonthlyWrappedProps {
   onClose: () => void;
@@ -12,17 +13,47 @@ export const MonthlyWrapped: React.FC<MonthlyWrappedProps> = ({ onClose }) => {
     games: 0,
     points: 0
   });
+  const [awardedReward, setAwardedReward] = useState(false);
 
-  // Mocking reading from LocalStorage
   useEffect(() => {
     try {
-      const gamiData = JSON.parse(localStorage.getItem('jasmin_nada_gamification') || '{}');
+      const now = new Date();
+      const currentMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+      
+      const historyRaw = localStorage.getItem('nada_helps_history');
+      let minutesActive = 0;
+      let cupsDrunk = 0;
+      let pointsEarned = 0;
+      
+      if (historyRaw) {
+        const history = JSON.parse(historyRaw);
+        for (const [dateStr, data] of Object.entries(history)) {
+          if (dateStr.startsWith(currentMonth)) {
+             minutesActive += (data as any).minutesActive || 0;
+             cupsDrunk += (data as any).cupsDrunk || 0;
+             pointsEarned += (data as any).pointsEarned || 0;
+          }
+        }
+      }
+
       setStats({
-        water: 35, // Mock data
-        pomodoro: 120, // Mock minutes
-        games: 12, // Mock games
-        points: gamiData.points || 0
+        water: cupsDrunk,
+        pomodoro: minutesActive,
+        games: 0,
+        points: pointsEarned
       });
+
+      const rewardFlag = `wrapped_reward_${currentMonth}`;
+      if (pointsEarned >= 2000 && !localStorage.getItem(rewardFlag)) {
+        triggerConfetti();
+        localStorage.setItem(rewardFlag, 'true');
+        setAwardedReward(true);
+        
+        const gamiRaw = localStorage.getItem('jasmin_nada_gamification');
+        const gamiData = gamiRaw ? JSON.parse(gamiRaw) : { points: 0 };
+        gamiData.points = (gamiData.points || 0) + 500;
+        localStorage.setItem('jasmin_nada_gamification', JSON.stringify(gamiData));
+      }
     } catch (e) {
       console.error(e);
     }

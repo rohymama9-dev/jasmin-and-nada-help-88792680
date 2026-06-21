@@ -3,16 +3,17 @@ import { useLang } from '@/contexts/LanguageContext';
 import { usePoints } from '@/hooks/usePoints';
 import { toast } from 'sonner';
 import { X } from 'lucide-react';
+import { triggerConfetti } from '@/lib/audio';
 
 const SEGMENTS = [
-  { label: '10 نقاط', labelEn: '10 Points', points: 10, color: '#f43f5e' },
-  { label: 'إعادة', labelEn: 'Retry', points: 0, color: '#8b5cf6' },
-  { label: '50 نقطة', labelEn: '50 Points', points: 50, color: '#f59e0b' },
-  { label: '20 نقطة', labelEn: '20 Points', points: 20, color: '#10b981' },
-  { label: 'إعادة', labelEn: 'Retry', points: 0, color: '#3b82f6' },
-  { label: '10 نقاط', labelEn: '10 Points', points: 10, color: '#ef4444' },
-  { label: '20 نقطة', labelEn: '20 Points', points: 20, color: '#06b6d4' },
-  { label: '50 نقطة', labelEn: '50 Points', points: 50, color: '#84cc16' },
+  { label: '100 النقاط الكبرى', labelEn: '100 Pts', points: 100, color: '#f43f5e', type: 'win' },
+  { label: '10 نقاط', labelEn: '10 Pts', points: 10, color: '#8b5cf6', type: 'win' },
+  { label: 'حظ أوفر', labelEn: 'Try Again', points: 0, color: '#64748b', type: 'lose' },
+  { label: 'ثيم مجاني ليوم', labelEn: 'Free Theme', points: 0, color: '#10b981', type: 'free_theme' },
+  { label: '50 نقطة', labelEn: '50 Pts', points: 50, color: '#3b82f6', type: 'win' },
+  { label: 'مخصوم 10 نقاط', labelEn: '-10 Pts', points: -10, color: '#ef4444', type: 'lose' },
+  { label: '20 نقطة', labelEn: '20 Pts', points: 20, color: '#06b6d4', type: 'win' },
+  { label: 'حظ أوفر', labelEn: 'Try Again', points: 0, color: '#84cc16', type: 'lose' },
 ];
 
 const LAST_SPUN_KEY = 'lucky_wheel_last_spun';
@@ -116,11 +117,26 @@ const LuckyWheel = ({ onClose }: LuckyWheelProps) => {
         setSpinning(false);
         const won = SEGMENTS[winIndex];
         setResult(won);
-        if (won.points > 0) {
+        
+        if (won.type === 'win' || won.type === 'free_theme') {
+          triggerConfetti();
+        }
+
+        if (won.type === 'free_theme') {
+          localStorage.setItem('free_theme_day', Date.now().toString());
+          toast.success(lang === 'ar' 
+            ? '🎉 مبروك! حصلت على ثيم مجاني ليوم واحد!' 
+            : '🎉 Congrats! You won a free theme for a day!');
+        } else if (won.points > 0) {
           addPoints(won.points);
           toast.success(lang === 'ar'
             ? `🎰 مبروك! ربحتِ ${won.points} نقطة!`
             : `🎰 Congrats! You won ${won.points} points!`);
+        } else if (won.points < 0) {
+          addPoints(won.points);
+          toast.error(lang === 'ar'
+            ? `😢 أووه لا! تم خصم ${Math.abs(won.points)} نقطة!`
+            : `😢 Oh no! You lost ${Math.abs(won.points)} points!`);
         } else {
           toast(lang === 'ar' ? '😅 حظ أوفر في المرة القادمة!' : '😅 Better luck next time!');
         }
@@ -188,10 +204,18 @@ const LuckyWheel = ({ onClose }: LuckyWheelProps) => {
         </div>
 
         {result && (
-          <div className={`text-center py-3 px-4 rounded-2xl mb-4 font-bold text-sm ${result.points > 0 ? 'bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300' : 'bg-slate-50 dark:bg-slate-800 text-slate-600 dark:text-slate-400'}`}>
-            {result.points > 0
+          <div className={`text-center py-3 px-4 rounded-2xl mb-4 font-bold text-sm ${
+            result.type === 'win' || result.type === 'free_theme'
+              ? 'bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300'
+              : 'bg-slate-50 dark:bg-slate-800 text-slate-600 dark:text-slate-400'
+          }`}>
+            {result.type === 'win'
               ? (lang === 'ar' ? `🎉 حصلتِ على ${result.points} نقطة!` : `🎉 You won ${result.points} points!`)
-              : (lang === 'ar' ? '😅 حاولي مجدداً غداً' : '😅 Try again tomorrow')}
+              : result.type === 'free_theme'
+                ? (lang === 'ar' ? '🎉 حصلت على ثيم مجاني!' : '🎉 You won a free theme!')
+                : result.points < 0
+                  ? (lang === 'ar' ? `😢 تم خصم ${Math.abs(result.points)} نقطة!` : `😢 You lost ${Math.abs(result.points)} points!`)
+                  : (lang === 'ar' ? '😅 حاولي مجدداً غداً' : '😅 Try again tomorrow')}
           </div>
         )}
 
