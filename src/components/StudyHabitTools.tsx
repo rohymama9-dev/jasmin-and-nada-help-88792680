@@ -3,6 +3,7 @@ import { Timer, Fingerprint, Target, Coffee, Play, Pause, RotateCcw, Trophy, Clo
 import { useLang } from '@/contexts/LanguageContext';
 import { usePoints } from '@/hooks/usePoints';
 import { toast } from 'sonner';
+import { playChimeSound } from '@/lib/audio';
 
 const WEEKLY_GOAL = 5000;
 const SMART_ROSARY_KEY = 'smart_rosary_weekly';
@@ -124,9 +125,15 @@ const StudyHabitTools = () => {
       }, 1000);
     } else if (pomoTime === 0) {
       setPomoActive(false);
+      import('@/lib/audio').then(m => m.playChimeSound());
       if (pomoMode === 'focus') {
+        import('@/lib/audio').then(m => m.triggerConfetti());
         setPomoMode('break');
         setPomoTime(5 * 60);
+        import('sonner').then(({ toast }) => toast.success(
+          lang === 'ar' ? '🍅 جلسة التركيز انتهت! +15 نقطة 🎉' : '🍅 Focus session done! +15 pts 🎉', { duration: 5000 }
+        ));
+        addPoints(15);
       } else {
         setPomoMode('focus');
         setPomoTime(25 * 60);
@@ -199,7 +206,7 @@ const StudyHabitTools = () => {
             </div>
 
             <button 
-              onClick={() => setRosaryCount(c => c + 1)}
+              onClick={() => { setRosaryCount(c => c + 1); import('@/lib/audio').then(m => m.playPopSound()); }}
               className="w-48 h-48 rounded-full bg-background border-[12px] border-primary/20 shadow-2xl flex flex-col items-center justify-center gap-2 active:scale-95 transition-all group relative overflow-hidden"
             >
               <div className="absolute inset-0 bg-primary/5 group-active:bg-primary/10 transition-colors" />

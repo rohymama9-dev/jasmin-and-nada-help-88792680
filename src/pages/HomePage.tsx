@@ -1,5 +1,5 @@
 import { useEffect, useState, useCallback, useMemo } from 'react';
-import { LogOut, Palette, CalendarDays, Skull, Sun, Moon, Globe } from 'lucide-react';
+import { LogOut, Palette, CalendarDays, Skull, Sun, Moon, Globe, Dices } from 'lucide-react';
 import { toast } from 'sonner';
 import { useLang } from '@/contexts/LanguageContext';
 import { useTheme } from '@/contexts/ThemeContext';
@@ -18,6 +18,8 @@ import { MonthlyWrapped } from '@/components/viral/MonthlyWrapped';
 import { ShareableResult } from '@/components/viral/ShareableResult';
 import VirtualPet from '@/components/VirtualPet';
 import TimeCapsule from '@/components/TimeCapsule';
+import StoryRings from '@/components/StoryRings';
+import LuckyWheel from '@/components/LuckyWheel';
 
 interface HomePageProps {
   points: number;
@@ -49,12 +51,41 @@ const HomePage = ({ points, addPoints }: HomePageProps) => {
   const [streak, setStreak] = useState(0);
   const [showThemeMenu, setShowThemeMenu] = useState(false);
   const [showWrapped, setShowWrapped] = useState(false);
+  const [showLuckyWheel, setShowLuckyWheel] = useState(false);
   const [habitsDoneToday, setHabitsDoneToday] = useState(false);
   const [showIOSHint, setShowIOSHint] = useState(() => {
     try {
       return isIOSDevice() && !localStorage.getItem('pwa-ios-hint-dismissed');
     } catch { return false; }
   });
+
+  // todayPoints from localStorage (updated in real-time)
+  const [todayPoints, setTodayPoints] = useState<number>(() => {
+    try { return parseInt(localStorage.getItem('jasmin_today_points') || '0', 10); } catch { return 0; }
+  });
+  useEffect(() => {
+    const syncTP = () => {
+      try { setTodayPoints(parseInt(localStorage.getItem('jasmin_today_points') || '0', 10)); } catch {}
+    };
+    window.addEventListener('storage', syncTP);
+    window.addEventListener('points-updated', syncTP);
+    return () => {
+      window.removeEventListener('storage', syncTP);
+      window.removeEventListener('points-updated', syncTP);
+    };
+  }, []);
+
+  // Time-reactive header gradient
+  const headerGradient = useMemo(() => {
+    const h = new Date().getHours();
+    if (h >= 5 && h < 8) return 'from-amber-400 via-orange-400 to-pink-400';       // Dawn
+    if (h >= 8 && h < 12) return 'from-sky-400 via-cyan-400 to-blue-400';          // Morning
+    if (h >= 12 && h < 15) return 'from-blue-500 via-sky-400 to-cyan-300';         // Noon
+    if (h >= 15 && h < 18) return 'from-orange-500 via-amber-400 to-yellow-300';   // Afternoon
+    if (h >= 18 && h < 21) return 'from-rose-500 via-pink-500 to-orange-400';      // Sunset
+    if (h >= 21 || h < 5) return 'from-indigo-900 via-slate-800 to-blue-900';      // Night
+    return 'from-rose-500 via-pink-500 to-orange-400';
+  }, []);
 
   const [savageMode, setSavageMode] = useState(() => localStorage.getItem('savageMode') === 'true');
   const toggleSavageMode = () => {
@@ -100,48 +131,57 @@ const HomePage = ({ points, addPoints }: HomePageProps) => {
     return lang === 'ar' ? 'مبتدئ يبحث عن الطريق 🌱' : 'Beginner Seeking the Path 🌱';
   };
 
-  const [flashChallenge, setFlashChallenge] = useState<{ name: string, expires: number } | null>(null);
+  const [flashChallenge, setFlashChallenge] = useState<{ name: string, nameEn: string, expires: number } | null>(null);
   const [flashTimeLeft, setFlashTimeLeft] = useState('');
 
   useEffect(() => {
+    const ALL_CHALLENGES = [
+      { ar: 'اشرب كوبين من الماء الآن', en: 'Drink 2 cups of water now' },
+      { ar: 'اقرأ صفحة من القرآن الكريم', en: 'Read a page of Quran' },
+      { ar: 'افعل 20 تمرين قرفصة الآن', en: 'Do 20 squats now' },
+      { ar: 'ابتسم وقل شيئاً جميلاً لشخص تحبه', en: 'Smile and say something kind to someone you love' },
+      { ar: 'قم بجولة مشي 5 دقائق الآن', en: 'Take a 5-minute walk right now' },
+      { ar: 'العب لعبة الذاكرة لمدة 3 دقائق', en: 'Play the Memory Game for 3 minutes' },
+      { ar: 'سجّل ثلاثة أشياء تشكرين الله عليها الآن', en: 'Write 3 things you are grateful for right now' },
+      { ar: 'تنفس بعمق 10 مرات', en: 'Take 10 deep breaths right now' },
+      { ar: 'أكمل 10 تسبيحات من الأذكار', en: 'Complete 10 Azkar recitations' },
+      { ar: 'اقرأ ملخصاً لكتاب في مكتبة الكتب', en: 'Read a book summary in the library' },
+      { ar: 'اكتب هدفاً واحداً ليومك في الكبسولة الزمنية', en: 'Write one goal in the Time Capsule today' },
+      { ar: 'رتّب ملفين على جهازك الآن', en: 'Organize 2 files on your device right now' },
+      { ar: 'مارس 10 تمرينات شد العنق', en: 'Do 10 neck stretching exercises' },
+      { ar: 'افتح تطبيق القرآن واستمع لآية واحدة', en: 'Open the Quran and listen to one verse' },
+      { ar: 'أرسل رسالة تشجيع لشخص تحبه', en: 'Send an encouraging message to someone you care about' },
+      { ar: 'افعل 10 ضغطات على الجدران لتنشيط الدورة الدموية', en: 'Do 10 wall push-ups to boost blood circulation' },
+    ];
+
     const generateFlashChallenge = () => {
       const now = Date.now();
-      
       const today = new Date().toDateString();
       const trackerStr = localStorage.getItem('flash_triggers');
-      const tracker = trackerStr ? JSON.parse(trackerStr) : { date: today, count: 0 };
+      const tracker = trackerStr ? JSON.parse(trackerStr) : { date: today, count: 0, used: [] };
       if (tracker.date !== today) {
         tracker.date = today;
         tracker.count = 0;
+        tracker.used = [];
       }
-      
+
       if (tracker.count >= 3) return;
 
-      if (Math.random() < 0.3) {
-        const challenges = [
-          { ar: 'العب لعبة الذاكرة', en: 'Play the Memory Game' },
-          { ar: 'اقرأ صفحة من القرآن', en: 'Read a page of Quran' },
-          { ar: 'اشرب كوبين من الماء', en: 'Drink 2 cups of water' },
-        ];
-        const selected = challenges[Math.floor(Math.random() * challenges.length)];
+      if (Math.random() < 0.5) {
+        // Pick a challenge not used today
+        const unused = ALL_CHALLENGES.filter((_, i) => !(tracker.used || []).includes(i));
+        const pool = unused.length > 0 ? unused : ALL_CHALLENGES;
+        const originalIndex = ALL_CHALLENGES.indexOf(pool[Math.floor(Math.random() * pool.length)]);
+        const selected = ALL_CHALLENGES[originalIndex < 0 ? 0 : originalIndex];
+
         const expires = now + 2 * 60 * 60 * 1000;
-        const challenge = { name: lang === 'ar' ? selected.ar : selected.en, expires };
+        const challenge = { name: selected.ar, nameEn: selected.en, expires };
         localStorage.setItem('flash_challenge', JSON.stringify(challenge));
         setFlashChallenge(challenge);
 
         tracker.count++;
+        tracker.used = [...(tracker.used || []), originalIndex < 0 ? 0 : originalIndex];
         localStorage.setItem('flash_triggers', JSON.stringify(tracker));
-
-        if ('Notification' in window) {
-           const msg = lang === 'ar' ? 'تحدي سري جديد متاح الآن! اكسب 70 نقطة' : 'New secret challenge! Earn 70 pts';
-           if (Notification.permission === 'granted') {
-             new Notification(msg);
-           } else if (Notification.permission !== 'denied') {
-             Notification.requestPermission().then(permission => {
-               if (permission === 'granted') new Notification(msg);
-             });
-           }
-        }
       }
     };
 
@@ -151,6 +191,8 @@ const HomePage = ({ points, addPoints }: HomePageProps) => {
       if (saved) {
         const parsed = JSON.parse(saved);
         if (now < parsed.expires) {
+          // Ensure nameEn exists (backwards compat)
+          if (!parsed.nameEn) parsed.nameEn = parsed.name;
           setFlashChallenge(parsed);
         } else {
           localStorage.removeItem('flash_challenge');
@@ -294,7 +336,7 @@ const HomePage = ({ points, addPoints }: HomePageProps) => {
   return (
     <div className="pb-4 space-y-5">
       {/* ── Header ── */}
-      <div className="relative -mx-5 -mt-5 rounded-b-3xl overflow-hidden mb-2 bg-gradient-to-r from-rose-500 via-pink-500 to-orange-400 shadow-lg">
+      <div className={`relative -mx-5 -mt-5 rounded-b-3xl overflow-hidden mb-2 bg-gradient-to-r ${headerGradient} shadow-lg transition-all duration-1000`}>
         <img src={floralBg} alt="" className="absolute inset-0 w-full h-full object-cover opacity-20 mix-blend-overlay pointer-events-none" />
         <div className="relative px-5 pt-8 pb-6">
           <div className="flex items-center justify-between mb-4">
@@ -334,6 +376,15 @@ const HomePage = ({ points, addPoints }: HomePageProps) => {
                 className="w-8 h-8 rounded-full flex items-center justify-center shrink-0 p-1 text-white hover:bg-white/10 transition-colors">
                 <Globe size={14} />
               </button>
+              {/* Lucky Wheel Button */}
+              <button
+                onClick={() => setShowLuckyWheel(true)}
+                aria-label={lang === 'ar' ? 'عجلة الحظ' : 'Lucky Wheel'}
+                className="w-8 h-8 rounded-full flex items-center justify-center shrink-0 p-1 text-white hover:bg-yellow-500/40 transition-colors"
+                title={lang === 'ar' ? 'عجلة الحظ اليومية 🎰' : 'Daily Lucky Wheel 🎰'}
+              >
+                <Dices size={14} />
+              </button>
               <button
                 onClick={() => {
                   try {
@@ -349,23 +400,31 @@ const HomePage = ({ points, addPoints }: HomePageProps) => {
               </button>
             </div>
           </div>
-          <div className="animate-in slide-in-from-left duration-500 flex items-center gap-2">
-            <PointsBadge points={points} />
-            {/* Monthly Wrapped trigger */}
-            <button
-              onClick={() => setShowWrapped(true)}
-              className="flex items-center gap-1 px-3 py-1.5 rounded-full bg-white/20 text-white text-[11px] font-bold hover:bg-white/30 transition-colors backdrop-blur-sm"
-              title={lang === 'ar' ? 'ملخص شهري' : 'Monthly Wrapped'}
-            >
-              <CalendarDays size={13} />
-              <span>{lang === 'ar' ? 'شهري ✨' : 'Wrapped ✨'}</span>
-            </button>
+          <div className="animate-in slide-in-from-left duration-500 flex items-center gap-4 w-full">
+            <div className="flex-1 overflow-hidden">
+              <StoryRings todayPoints={todayPoints} />
+            </div>
+            <div className="flex flex-col items-end gap-2 shrink-0">
+              <PointsBadge points={points} />
+              {/* Monthly Wrapped trigger */}
+              <button
+                onClick={() => setShowWrapped(true)}
+                className="flex items-center gap-1 px-3 py-1.5 rounded-full bg-white/20 text-white text-[11px] font-bold hover:bg-white/30 transition-colors backdrop-blur-sm shadow-sm border border-white/30"
+                title={lang === 'ar' ? 'ملخص شهري' : 'Monthly Wrapped'}
+              >
+                <CalendarDays size={13} />
+                <span>{lang === 'ar' ? 'شهري ✨' : 'Wrapped ✨'}</span>
+              </button>
+            </div>
           </div>
         </div>
       </div>
 
       {/* Monthly Wrapped full-screen story */}
       {showWrapped && <MonthlyWrapped onClose={() => setShowWrapped(false)} />}
+
+      {/* Daily Lucky Wheel */}
+      {showLuckyWheel && <LuckyWheel onClose={() => setShowLuckyWheel(false)} />}
 
       {/* ── iOS Install Mini-Banner (Apple users only) ── */}
       {showIOSHint && (
@@ -393,26 +452,25 @@ const HomePage = ({ points, addPoints }: HomePageProps) => {
 
       {/* Flash Challenge Banner */}
       {flashChallenge && (
-        <div className={`mx-1 p-3 rounded-2xl text-white shadow-lg flex justify-between items-center relative overflow-hidden transition-all duration-500 ${localStorage.getItem('flash_completed') === flashChallenge.name ? 'bg-emerald-500 opacity-90' : 'bg-gradient-to-r from-yellow-500 to-amber-500 animate-bounce-in'}`}>
-          <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/cubes.png')] opacity-10"></div>
+        <div className={`mx-1 p-3 rounded-2xl text-white shadow-lg flex justify-between items-center relative overflow-hidden transition-all duration-500 ${localStorage.getItem('flash_completed_key') === flashChallenge.name ? 'bg-emerald-500 opacity-90' : 'bg-gradient-to-r from-yellow-500 to-amber-500'}`}>
           <div className="relative z-10 flex-1">
             <p className="text-[10px] font-black uppercase tracking-wider text-white/90">{lang === 'ar' ? '⚡ تحدي مفاجئ!' : '⚡ Flash Challenge!'}</p>
-            <p className="font-bold text-sm leading-tight mt-0.5">{flashChallenge.name}</p>
-            {localStorage.getItem('flash_completed') === flashChallenge.name ? (
+            <p className="font-bold text-sm leading-tight mt-0.5">{lang === 'ar' ? flashChallenge.name : (flashChallenge.nameEn || flashChallenge.name)}</p>
+            {localStorage.getItem('flash_completed_key') === flashChallenge.name ? (
               <div className="mt-2 text-white text-[10px] font-bold px-3 py-1 rounded-full bg-black/20 inline-block">
-                {lang === 'ar' ? '✅ اكتملت المهمة (تم أخذ النقاط)' : '✅ Completed (Points claimed)'}
+                {lang === 'ar' ? '✅ اكتملت المهمة (+70 نقطة)' : '✅ Completed (+70 pts)'}
               </div>
             ) : (
-              <button 
+              <button
                 onClick={() => {
-                   addPoints(70);
-                   localStorage.setItem('flash_completed', flashChallenge.name);
-                   setFlashChallenge({ ...flashChallenge }); // force re-render
-                   toast.success(lang === 'ar' ? 'أنجزت التحدي! +70 نقطة 🎉' : 'Challenge completed! +70 points 🎉');
+                  addPoints(70);
+                  localStorage.setItem('flash_completed_key', flashChallenge.name);
+                  setFlashChallenge({ ...flashChallenge });
+                  toast.success(lang === 'ar' ? 'أنجزت التحدي! +70 نقطة 🎉' : 'Challenge done! +70 points 🎉');
                 }}
                 className="mt-2 bg-white text-amber-600 text-[10px] font-bold px-3 py-1 rounded-full hover:bg-yellow-50 transition-colors shadow-sm"
               >
-                {lang === 'ar' ? 'أكملت التحدي (70+ نقطة)' : 'Completed (+70 pts)'}
+                {lang === 'ar' ? 'أكملت التحدي (+70)' : 'Completed (+70 pts)'}
               </button>
             )}
           </div>

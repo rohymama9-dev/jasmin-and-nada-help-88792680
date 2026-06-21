@@ -45,6 +45,7 @@ const AzkarView = () => {
       const current = prev[id] || 0;
       if (current < target) {
         const next = current + 1;
+        import('@/lib/audio').then(m => m.playPopSound());
         updateChallenge('education', true);
         if (next === target) {
           addPoints(2);
