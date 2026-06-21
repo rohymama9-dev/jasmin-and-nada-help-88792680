@@ -39,6 +39,38 @@ function RootComponent() {
   const [queryClient] = useState(() => new QueryClient());
   useLocalNotifications();
   useEffect(() => { initDailyVisitTracker(); }, []);
+
+  useEffect(() => {
+    let activeMinutes = 0;
+    let lastActivity = Date.now();
+    
+    const updateActivity = () => {
+       lastActivity = Date.now();
+    };
+    
+    window.addEventListener('mousemove', updateActivity);
+    window.addEventListener('touchstart', updateActivity);
+    window.addEventListener('keydown', updateActivity);
+    
+    const interval = setInterval(() => {
+       if (Date.now() - lastActivity < 60000) { // active in last minute
+          const today = new Date().toISOString().split('T')[0]; // YYYY-MM-DD
+          const historyStr = localStorage.getItem('nada_helps_history') || '{}';
+          const history = JSON.parse(historyStr);
+          if (!history[today]) history[today] = { minutesActive: 0, cupsDrunk: 0, pointsEarned: 0 };
+          history[today].minutesActive += 1;
+          localStorage.setItem('nada_helps_history', JSON.stringify(history));
+       }
+    }, 60000);
+    
+    return () => {
+      clearInterval(interval);
+      window.removeEventListener('mousemove', updateActivity);
+      window.removeEventListener('touchstart', updateActivity);
+      window.removeEventListener('keydown', updateActivity);
+    };
+  }, []);
+
   const routerState = useRouterState();
 
   return (

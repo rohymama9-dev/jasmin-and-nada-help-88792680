@@ -289,3 +289,40 @@
       radial-gradient(at 50% 90%, hsl(38 70% 58% / 0.04) 0px, transparent 50%);
   }
 }
+
+/* ── Custom Themes ─────────────────────── */
+.theme-90s {
+  --background: 330 100% 95%;
+  --foreground: 330 50% 20%;
+  --primary: 320 80% 50%;
+  --accent: 180 80% 45%;
+  --card: 60 100% 95%;
+}
+.theme-90s.dark {
+  --background: 300 100% 10%;
+  --foreground: 330 100% 90%;
+  --primary: 320 100% 60%;
+  --accent: 180 100% 50%;
+  --card: 280 80% 15%;
+}
+.theme-space {
+  --background: 240 100% 4%;
+  --foreground: 210 100% 90%;
+  --primary: 280 100% 60%;
+  --accent: 190 100% 50%;
+  --card: 240 80% 8%;
+}
+.theme-nature {
+  --background: 120 40% 95%;
+  --foreground: 120 40% 20%;
+  --primary: 130 50% 40%;
+  --accent: 80 50% 40%;
+  --card: 100 40% 98%;
+}
+.theme-nature.dark {
+  --background: 120 40% 8%;
+  --foreground: 120 40% 90%;
+  --primary: 130 50% 40%;
+  --accent: 80 50% 40%;
+  --card: 120 40% 12%;
+}

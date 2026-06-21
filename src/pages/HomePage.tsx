@@ -20,6 +20,7 @@ import VirtualPet from '@/components/VirtualPet';
 import TimeCapsule from '@/components/TimeCapsule';
 import StoryRings from '@/components/StoryRings';
 import LuckyWheel from '@/components/LuckyWheel';
+import ThemesShop, { applyThemeClass } from '@/components/ThemesShop';
 
 interface HomePageProps {
   points: number;
@@ -52,6 +53,7 @@ const HomePage = ({ points, addPoints }: HomePageProps) => {
   const [showThemeMenu, setShowThemeMenu] = useState(false);
   const [showWrapped, setShowWrapped] = useState(false);
   const [showLuckyWheel, setShowLuckyWheel] = useState(false);
+  const [showThemesShop, setShowThemesShop] = useState(false);
   const [habitsDoneToday, setHabitsDoneToday] = useState(false);
   const [showIOSHint, setShowIOSHint] = useState(() => {
     try {
@@ -73,6 +75,15 @@ const HomePage = ({ points, addPoints }: HomePageProps) => {
       window.removeEventListener('storage', syncTP);
       window.removeEventListener('points-updated', syncTP);
     };
+  }, []);
+
+  useEffect(() => {
+    // Apply selected theme on load
+    const savedThemeId = localStorage.getItem('selected_theme') || 'default';
+    if (savedThemeId === '90s') applyThemeClass('theme-90s');
+    else if (savedThemeId === 'space') applyThemeClass('theme-space');
+    else if (savedThemeId === 'nature') applyThemeClass('theme-nature');
+    else applyThemeClass('');
   }, []);
 
   // Time-reactive header gradient
@@ -376,6 +387,15 @@ const HomePage = ({ points, addPoints }: HomePageProps) => {
                 className="w-8 h-8 rounded-full flex items-center justify-center shrink-0 p-1 text-white hover:bg-white/10 transition-colors">
                 <Globe size={14} />
               </button>
+              {/* Themes Shop Button */}
+              <button
+                onClick={() => setShowThemesShop(true)}
+                aria-label={lang === 'ar' ? 'متجر الثيمات' : 'Themes Shop'}
+                className="w-8 h-8 rounded-full flex items-center justify-center shrink-0 p-1 text-white hover:bg-purple-500/40 transition-colors"
+                title={lang === 'ar' ? 'متجر الثيمات 🎨' : 'Themes Shop 🎨'}
+              >
+                <Palette size={14} />
+              </button>
               {/* Lucky Wheel Button */}
               <button
                 onClick={() => setShowLuckyWheel(true)}
@@ -425,6 +445,9 @@ const HomePage = ({ points, addPoints }: HomePageProps) => {
 
       {/* Daily Lucky Wheel */}
       {showLuckyWheel && <LuckyWheel onClose={() => setShowLuckyWheel(false)} />}
+
+      {/* Themes Shop */}
+      {showThemesShop && <ThemesShop onClose={() => setShowThemesShop(false)} points={points} addPoints={addPoints} />}
 
       {/* ── iOS Install Mini-Banner (Apple users only) ── */}
       {showIOSHint && (

@@ -143,19 +143,18 @@ const StudyHabitTools = () => {
   }, [pomoActive, pomoTime, pomoMode]);
 
   useEffect(() => {
-    const handleVisibilityChange = () => {
-      if (document.hidden && pomoActive && pomoMode === 'focus') {
+    const handleVisibility = () => {
+      if (document.visibilityState === 'hidden' && pomoActive && pomoMode === 'focus') {
+        // Penalty!
         setPomoActive(false);
-        addPoints(-2);
-        toast.error(lang === 'ar' 
-          ? '٥ دقائق مذاكرة لا تصنع منك عالماً، عُد إلى مكتبك! (-2 نقطة)' 
-          : '5 minutes of studying doesn\'t make you a scientist, get back to work! (-2 points)', 
-          { duration: 5000, icon: '😠' }
-        );
+        setPomoTime(25 * 60); // reset
+        addPoints(-20);
+        import('@/lib/audio').then(m => m.playChimeSound());
+        toast.error(lang === 'ar' ? '⚠️ غادرت الصفحة أثناء التركيز! خُصم 20 نقطة.' : '⚠️ Left page during focus! -20 points.');
       }
     };
-    document.addEventListener('visibilitychange', handleVisibilityChange);
-    return () => document.removeEventListener('visibilitychange', handleVisibilityChange);
+    document.addEventListener('visibilitychange', handleVisibility);
+    return () => document.removeEventListener('visibilitychange', handleVisibility);
   }, [pomoActive, pomoMode, addPoints, lang]);
 
   const togglePomo = () => setPomoActive(!pomoActive);
