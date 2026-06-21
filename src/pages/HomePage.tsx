@@ -1,5 +1,6 @@
 import { useEffect, useState, useCallback, useMemo } from 'react';
-import { LogOut, Palette, CalendarDays } from 'lucide-react';
+import { LogOut, Palette, CalendarDays, Skull } from 'lucide-react';
+import { toast } from 'sonner';
 import { useLang } from '@/contexts/LanguageContext';
 import { useTheme } from '@/contexts/ThemeContext';
 import { supabase } from '@/integrations/supabase/client';
@@ -13,11 +14,9 @@ import StudyHabitTools from '@/components/StudyHabitTools';
 import DailyComboChallenge from '@/components/DailyComboChallenge';
 import { InstallBanner } from '@/components/InstallBanner';
 import floralBg from '@/assets/floral-bg.jpg';
-import { DndContext, closestCenter, KeyboardSensor, PointerSensor, useSensor, useSensors, DragEndEvent } from '@dnd-kit/core';
-import { arrayMove, SortableContext, sortableKeyboardCoordinates, verticalListSortingStrategy } from '@dnd-kit/sortable';
-import { SortableWidget } from '@/components/gamification/SortableWidget';
 import { MonthlyWrapped } from '@/components/viral/MonthlyWrapped';
 import { ShareableResult } from '@/components/viral/ShareableResult';
+import VirtualPet from '@/components/VirtualPet';
 
 interface HomePageProps {
   points: number;
@@ -36,6 +35,7 @@ const DEFAULT_WIDGET_ORDER = [
   'services_banner',
   'promo_compressor',
   'combo_challenge',
+  'dino_pet',
   'weekly_challenge',
   'study_tools',
   'habit_tracker'
@@ -45,6 +45,7 @@ const HomePage = ({ points, addPoints }: HomePageProps) => {
   const { t, lang, toggleLang } = useLang();
   const { theme, setTheme } = useTheme();
   const [name, setName] = useState<string>(() => getGuestName());
+  const [streak, setStreak] = useState(0);
   const [showThemeMenu, setShowThemeMenu] = useState(false);
   const [showWrapped, setShowWrapped] = useState(false);
   const [habitsDoneToday, setHabitsDoneToday] = useState(false);
@@ -54,20 +55,42 @@ const HomePage = ({ points, addPoints }: HomePageProps) => {
     } catch { return false; }
   });
 
-  const [widgetOrder, setWidgetOrder] = useState<string[]>(() => {
-    try {
-      const saved = localStorage.getItem('dashboard-widget-order');
-      if (saved) {
-        const parsed = JSON.parse(saved);
-        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
-      }
-    } catch (e) {}
-    return DEFAULT_WIDGET_ORDER;
-  });
+  const [savageMode, setSavageMode] = useState(() => localStorage.getItem('savageMode') === 'true');
+  const toggleSavageMode = () => {
+    const next = !savageMode;
+    setSavageMode(next);
+    localStorage.setItem('savageMode', String(next));
+    toast.success(next ? (lang === 'ar' ? 'الوضع الساخر مفعل 💀' : 'Savage Mode ON 💀') : (lang === 'ar' ? 'تم إيقاف الوضع الساخر 😇' : 'Savage Mode OFF 😇'));
+  };
 
-  useEffect(() => {
-    localStorage.setItem('dashboard-widget-order', JSON.stringify(widgetOrder));
-  }, [widgetOrder]);
+  const [clickCount, setClickCount] = useState(0);
+  const [lastClickTime, setLastClickTime] = useState(0);
+
+  const handleLogoClick = () => {
+    const now = Date.now();
+    if (now - lastClickTime > 2000) {
+      setClickCount(1);
+      setLastClickTime(now);
+    } else {
+      const newCount = clickCount + 1;
+      setClickCount(newCount);
+      setLastClickTime(now);
+      
+      if (newCount === 5) {
+        if (!localStorage.getItem('easter_egg_found')) {
+          addPoints(10);
+          localStorage.setItem('easter_egg_found', 'true');
+          toast.success(lang === 'ar' ? 'اكتشفت السر! +10 نقاط 🙃' : 'You found the secret! +10 points 🙃');
+        }
+        document.body.style.transition = 'transform 0.5s ease';
+        document.body.style.transform = 'rotate(180deg)';
+        setTimeout(() => {
+          document.body.style.transform = '';
+        }, 2000);
+        setClickCount(0);
+      }
+    }
+  };
 
   useEffect(() => {
     let active = true;
@@ -80,22 +103,39 @@ const HomePage = ({ points, addPoints }: HomePageProps) => {
     return () => { active = false; };
   }, []);
 
-  const sensors = useSensors(
-    useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
-    useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates })
-  );
+  // Streak logic (Silsila)
+  useEffect(() => {
+    try {
+      const lastVisitStr = localStorage.getItem('lastVisitDate');
+      const streakStr = localStorage.getItem('userStreak');
+      const today = new Date().toDateString();
 
-  const handleDragEnd = (event: DragEndEvent) => {
-    const { active, over } = event;
-    if (over && active.id !== over.id) {
-      setWidgetOrder((items) => {
-        const oldIndex = items.indexOf(active.id as string);
-        const newIndex = items.indexOf(over.id as string);
-        return arrayMove(items, oldIndex, newIndex);
-      });
+      let currentStreak = parseInt(streakStr || '0', 10);
+
+      if (lastVisitStr !== today) {
+        if (lastVisitStr) {
+          const lastVisitDate = new Date(lastVisitStr);
+          const yesterday = new Date();
+          yesterday.setDate(yesterday.getDate() - 1);
+          
+          if (lastVisitDate.toDateString() === yesterday.toDateString()) {
+            currentStreak += 1;
+          } else {
+            currentStreak = 1; // Missed a day, reset to 1
+          }
+        } else {
+          currentStreak = 1; // First visit
+        }
+        localStorage.setItem('lastVisitDate', today);
+        localStorage.setItem('userStreak', currentStreak.toString());
+      }
+      setStreak(currentStreak);
+    } catch (e) {
+      // Ignore local storage errors
     }
-  };
+  }, []);
 
+  // WIDGETS_MAP
   const WIDGETS_MAP: Record<string, React.ReactNode> = useMemo(() => ({
     'daily_dashboard': <DailyDashboard />,
     'services_banner': <ServicesBanner />,
@@ -161,12 +201,7 @@ const HomePage = ({ points, addPoints }: HomePageProps) => {
     )
   }), [lang]);
 
-  // Ensure any newly added widgets not in localStorage are displayed
-  const visibleWidgets = useMemo(() => {
-    const sorted = widgetOrder.filter(id => WIDGETS_MAP[id]);
-    const missing = Object.keys(WIDGETS_MAP).filter(id => !sorted.includes(id));
-    return [...sorted, ...missing];
-  }, [widgetOrder, WIDGETS_MAP]);
+  const visibleWidgets = DEFAULT_WIDGET_ORDER;
 
   return (
     <div className="pb-4 space-y-5">
@@ -176,7 +211,7 @@ const HomePage = ({ points, addPoints }: HomePageProps) => {
         <div className="relative px-5 pt-8 pb-6">
           <div className="flex items-center justify-between mb-4">
             <div>
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-2 cursor-pointer select-none" onClick={handleLogoClick}>
                 <h1 className="text-2xl font-bold text-white">
                   {name ? `${lang === 'ar' ? 'مرحباً' : 'Welcome'} ${name}` : t('welcome')} 🌸
                 </h1>
@@ -195,12 +230,19 @@ const HomePage = ({ points, addPoints }: HomePageProps) => {
                   <Palette size={14} />
                 </button>
                 {showThemeMenu && (
-                  <div className="absolute top-full mt-2 right-0 bg-background border border-border rounded-lg shadow-xl p-2 flex flex-col gap-1 z-50 min-w-[120px]">
+                  <div className="absolute top-full mt-2 right-0 bg-background border border-border rounded-lg shadow-xl p-2 flex flex-col gap-1 z-50 min-w-[150px]">
+                    <div className="text-[10px] font-bold text-muted-foreground uppercase px-2 pb-1 border-b border-border/50">{t('المظهر', 'Theme')}</div>
                     <button onClick={() => { setTheme('light'); setShowThemeMenu(false); }} className={`text-left text-sm p-2 rounded hover:bg-secondary ${theme === 'light' ? 'bg-secondary font-bold' : ''}`}>Light</button>
                     <button onClick={() => { setTheme('dark'); setShowThemeMenu(false); }} className={`text-left text-sm p-2 rounded hover:bg-secondary ${theme === 'dark' ? 'bg-secondary font-bold' : ''}`}>Dark</button>
                     <button onClick={() => { setTheme('hacker'); setShowThemeMenu(false); }} className={`text-left text-sm p-2 rounded hover:bg-secondary ${theme === 'hacker' ? 'bg-secondary font-bold' : ''}`}>Hacker 🟩</button>
                     <button onClick={() => { setTheme('win98'); setShowThemeMenu(false); }} className={`text-left text-sm p-2 rounded hover:bg-secondary ${theme === 'win98' ? 'bg-secondary font-bold' : ''}`}>Win 98 🪟</button>
                     <button onClick={() => { setTheme('neon-dark'); setShowThemeMenu(false); }} className={`text-left text-sm p-2 rounded hover:bg-secondary ${theme === 'neon-dark' ? 'bg-secondary font-bold' : ''}`}>Neon 💜</button>
+                    
+                    <div className="text-[10px] font-bold text-muted-foreground uppercase px-2 pt-2 pb-1 mt-1 border-t border-border/50">{t('إعدادات إضافية', 'Extras')}</div>
+                    <button onClick={() => { toggleSavageMode(); setShowThemeMenu(false); }} className={`flex justify-between items-center text-left text-sm p-2 rounded hover:bg-red-500/10 hover:text-red-500 transition-colors ${savageMode ? 'text-red-500 font-bold bg-red-500/10' : ''}`}>
+                      <span>{lang === 'ar' ? 'الوضع الساخر' : 'Savage Mode'}</span>
+                      <Skull size={14} />
+                    </button>
                   </div>
                 )}
               </div>
@@ -225,6 +267,13 @@ const HomePage = ({ points, addPoints }: HomePageProps) => {
           </div>
           <div className="animate-in slide-in-from-left duration-500 flex items-center gap-2">
             <PointsBadge points={points} />
+            {/* Streak Badge */}
+            {streak >= 2 && (
+              <div className="flex items-center gap-1 px-3 py-1.5 rounded-full bg-orange-500/20 text-orange-100 text-[11px] font-bold border border-orange-500/30 backdrop-blur-sm" title={lang === 'ar' ? 'سلسلة الحضور' : 'Visit Streak'}>
+                <span className="text-sm">🔥</span>
+                <span>{streak}</span>
+              </div>
+            )}
             {/* Monthly Wrapped trigger */}
             <button
               onClick={() => setShowWrapped(true)}
@@ -265,18 +314,14 @@ const HomePage = ({ points, addPoints }: HomePageProps) => {
         </div>
       )}
 
-      {/* ── Sortable Dashboard Widgets ── */}
-      <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
-        <SortableContext items={visibleWidgets} strategy={verticalListSortingStrategy}>
-          <div className="space-y-6 flex flex-col pt-2">
-            {visibleWidgets.map(id => (
-              <SortableWidget key={id} id={id}>
-                {WIDGETS_MAP[id]}
-              </SortableWidget>
-            ))}
+      {/* ── Dashboard Widgets ── */}
+      <div className="space-y-6 flex flex-col pt-2">
+        {visibleWidgets.map(id => (
+          <div key={id} id={id}>
+            {WIDGETS_MAP[id]}
           </div>
-        </SortableContext>
-      </DndContext>
+        ))}
+      </div>
 
       <AdPlaceholder size="rectangle" />
 

@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { Timer, Fingerprint, Target, Coffee, Play, Pause, RotateCcw, Trophy } from 'lucide-react';
+import { Timer, Fingerprint, Target, Coffee, Play, Pause, RotateCcw, Trophy, CloudRain, Waves, Radio } from 'lucide-react';
 import { useLang } from '@/contexts/LanguageContext';
 import { usePoints } from '@/hooks/usePoints';
 import { toast } from 'sonner';
@@ -18,6 +18,27 @@ const StudyHabitTools = () => {
   const { addPoints } = usePoints();
   const [activeTab, setActiveTab] = useState<'rosary' | 'pomodoro'>('rosary');
   const t = (ar: string, en: string) => (lang === 'ar' ? ar : en);
+
+  // Ambient Sounds
+  const SOUNDS = [
+    { id: 'rain', icon: CloudRain, nameAr: 'مطر', nameEn: 'Rain', url: 'https://assets.mixkit.co/active_storage/sfx/2393/2393-preview.mp3' },
+    { id: 'ocean', icon: Waves, nameAr: 'أمواج', nameEn: 'Ocean', url: 'https://assets.mixkit.co/active_storage/sfx/1196/1196-preview.mp3' },
+    { id: 'noise', icon: Radio, nameAr: 'ضوضاء بيضاء', nameEn: 'White Noise', url: 'https://assets.mixkit.co/active_storage/sfx/1087/1087-preview.mp3' }
+  ];
+  const [activeSound, setActiveSound] = useState<string | null>(null);
+  const audioRef = useRef<HTMLAudioElement | null>(null);
+
+  const toggleSound = (sound: typeof SOUNDS[0]) => {
+    if (!audioRef.current) return;
+    if (activeSound === sound.id) {
+      audioRef.current.pause();
+      setActiveSound(null);
+    } else {
+      audioRef.current.src = sound.url;
+      audioRef.current.play().catch(() => {});
+      setActiveSound(sound.id);
+    }
+  };
 
   // Get the start of the current week (Monday)
   const getWeekStartDate = (): string => {
@@ -113,6 +134,22 @@ const StudyHabitTools = () => {
     }
     return () => { if (timerRef.current) clearInterval(timerRef.current); };
   }, [pomoActive, pomoTime, pomoMode]);
+
+  useEffect(() => {
+    const handleVisibilityChange = () => {
+      if (document.hidden && pomoActive && pomoMode === 'focus') {
+        setPomoActive(false);
+        addPoints(-2);
+        toast.error(lang === 'ar' 
+          ? '٥ دقائق مذاكرة لا تصنع منك عالماً، عُد إلى مكتبك! (-2 نقطة)' 
+          : '5 minutes of studying doesn\'t make you a scientist, get back to work! (-2 points)', 
+          { duration: 5000, icon: '😠' }
+        );
+      }
+    };
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    return () => document.removeEventListener('visibilitychange', handleVisibilityChange);
+  }, [pomoActive, pomoMode, addPoints, lang]);
 
   const togglePomo = () => setPomoActive(!pomoActive);
   const resetPomo = () => {
@@ -215,6 +252,31 @@ const StudyHabitTools = () => {
               </button>
               <div className="w-14" /> {/* Spacer */}
             </div>
+
+            {/* Ambient Sounds */}
+            <div className="pt-6 border-t border-border/50 w-full">
+              <p className="text-xs font-bold text-muted-foreground mb-4 uppercase tracking-widest">{t('أصوات محيطة', 'Ambient Sounds')}</p>
+              <div className="flex justify-center gap-3">
+                {SOUNDS.map(sound => {
+                  const isActive = activeSound === sound.id;
+                  return (
+                    <button
+                      key={sound.id}
+                      onClick={() => toggleSound(sound)}
+                      className={`flex flex-col items-center gap-2 p-3 rounded-2xl transition-all active:scale-95 w-24 ${
+                        isActive 
+                          ? 'bg-primary/10 text-primary border border-primary/30 shadow-sm' 
+                          : 'bg-secondary/50 text-muted-foreground hover:bg-secondary border border-transparent'
+                      }`}
+                    >
+                      <sound.icon size={24} className={isActive ? 'animate-pulse' : ''} />
+                      <span className="text-[10px] font-bold">{lang === 'ar' ? sound.nameAr : sound.nameEn}</span>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+            <audio ref={audioRef} loop className="hidden" />
           </div>
         )}
       </div>

@@ -46,7 +46,7 @@ const services: ServiceCard[] = [
   { id: 'personalityquizzes', icon: Sparkles, nameAr: 'اختبارات الشخصية', nameEn: 'Personality Quizzes', cost: 20, color: 'from-purple-500 to-indigo-600' },
   { id: 'contact', icon: Sparkles, nameAr: 'مراسلة المسؤولة (مجاني)', nameEn: 'Contact Admin (Free)', cost: 0, color: 'from-emerald-500 to-teal-600' },
   // ── Locked premium tools — cost 80 points each ──────────────
-  { id: 'compressor', icon: FileArchive, nameAr: '🗜️ ضغط الملفات والصور والفيديوهات', nameEn: '🗜️ Compress Files, Images & Videos', cost: 80, color: 'from-teal-500 to-cyan-600' },
+  { id: 'compressor', icon: FileArchive, nameAr: '🗜️ ضغط الملفات والصور', nameEn: '🗜️ Compress Files & Images', cost: 80, color: 'from-teal-500 to-cyan-600' },
   { id: 'converter', icon: FileCode2, nameAr: '🔄 محول الصيغ الشامل', nameEn: '🔄 Universal Format Converter', cost: 80, color: 'from-indigo-500 to-violet-600' },
   { id: 'resizer', icon: Crop, nameAr: '🖼️ معدّل المقاسات الدقيق', nameEn: '🖼️ Precision Resizer', cost: 80, color: 'from-orange-500 to-amber-600' },
   { id: 'currency', icon: DollarSign, nameAr: '💱 حاسبة العملات', nameEn: '💱 Currency Converter', cost: 0, color: 'from-emerald-500 to-lime-500' },

@@ -1,18 +1,17 @@
 import { useState, useRef } from 'react';
 import { useLang } from '@/contexts/LanguageContext';
-import { Download, X, Check, Settings2, Image as ImageIcon, FileText, Video } from 'lucide-react';
+import { Download, X, Check, Settings2, Image as ImageIcon, FileText } from 'lucide-react';
 import { toast } from 'sonner';
 
 const FileCompressor = () => {
   const { lang } = useLang();
-  const [tab, setTab] = useState<'image' | 'file' | 'video'>('image');
+  const [tab, setTab] = useState<'image' | 'file'>('image');
   const [file, setFile] = useState<File | null>(null);
   const [preview, setPreview] = useState<string | null>(null);
   
   // Compression & format states
   const [compressionRatio, setCompressionRatio] = useState(70);
   const [imageFormat, setImageFormat] = useState<'auto' | 'image/webp' | 'image/jpeg' | 'image/png'>('auto');
-  const [videoFormat, setVideoFormat] = useState<'video/mp4' | 'video/webm'>('video/mp4');
   const [fileFormat, setFileFormat] = useState<'gzip' | 'deflate'>('gzip');
   
   const [processing, setProcessing] = useState(false);
@@ -32,7 +31,7 @@ const FileCompressor = () => {
     setResultSize(0);
     setStatusMessage(null);
     setProgress('');
-    if ((tab === 'image' && nextFile.type.startsWith('image/')) || (tab === 'video' && nextFile.type.startsWith('video/'))) {
+    if ((tab === 'image' && nextFile.type.startsWith('image/'))) {
       setPreview(URL.createObjectURL(nextFile));
     } else {
       setPreview(null);
@@ -99,107 +98,6 @@ const FileCompressor = () => {
     URL.revokeObjectURL(url);
   };
 
-  const compressVideoNative = async () => {
-    if (!file) return;
-    setStatusMessage(lang === 'ar' ? 'جاري ضغط الفيديو...' : 'Compressing video...');
-    
-    try {
-      const video = document.createElement('video');
-      video.src = URL.createObjectURL(file);
-      // MUST be false to capture the audio track
-      video.muted = false;
-      video.volume = 1;
-      video.crossOrigin = 'anonymous';
-      
-      await new Promise<void>((resolve, reject) => {
-        video.onloadedmetadata = () => resolve();
-        video.onerror = reject;
-      });
-
-      const canvas = document.createElement('canvas');
-      
-      // Calculate dynamic scale to guarantee size reduction
-      const scaleDown = 1 - ((compressionRatio / 100) * 0.7);
-      canvas.width = Math.max(video.videoWidth * scaleDown, 10);
-      canvas.height = Math.max(video.videoHeight * scaleDown, 10);
-      
-      const ctx = canvas.getContext('2d');
-      const videoStream = canvas.captureStream(30); // 30 FPS
-
-      // Capture audio track via AudioContext routed to MediaStreamDestination
-      const audioCtx = new AudioContext();
-      const audioDest = audioCtx.createMediaStreamDestination();
-      try {
-        const source = audioCtx.createMediaElementSource(video);
-        source.connect(audioDest);
-        source.connect(audioCtx.destination); // also play it so video.play() works
-        const audioTrack = audioDest.stream.getAudioTracks()[0];
-        if (audioTrack) {
-          videoStream.addTrack(audioTrack);
-          console.log('[VideoCompressor] Audio track captured OK');
-        }
-      } catch (audioErr) {
-        console.warn('[VideoCompressor] Could not capture audio track:', audioErr);
-        // Continue without audio rather than failing completely
-      }
-
-      // Calculate Target Bitrate
-      const originalBitrate = (file.size * 8) / (video.duration || 1);
-      const minBitrate = 50000;
-      let targetBitrate = originalBitrate * ((100 - compressionRatio) / 100);
-      if (targetBitrate < minBitrate) targetBitrate = minBitrate;
-      if (targetBitrate >= originalBitrate) targetBitrate = originalBitrate * 0.95;
-
-      // Pick best supported mimeType with audio codec included
-      const preferredTypes = [
-        'video/webm;codecs=vp9,opus',
-        'video/webm;codecs=vp8,opus',
-        'video/mp4',
-        'video/webm',
-      ];
-      const mimeType = preferredTypes.find(t => MediaRecorder.isTypeSupported(t)) || '';
-      const options: MediaRecorderOptions = { 
-        mimeType,
-        videoBitsPerSecond: targetBitrate * 0.8,
-        audioBitsPerSecond: 128000, // 128kbps — keeps audio quality
-      };
-      
-      const recorder = new MediaRecorder(videoStream, options);
-      const chunks: Blob[] = [];
-
-      recorder.ondataavailable = e => { if (e.data.size > 0) chunks.push(e.data); };
-      recorder.onstop = () => {
-        const blob = new Blob(chunks, { type: recorder.mimeType || 'video/webm' });
-        setResultBlob(blob);
-        setResultSize(blob.size);
-        setDone(true);
-        setProcessing(false);
-        setStatusMessage(lang === 'ar' ? 'تم ضغط الفيديو بنجاح مع الصوت.' : 'Video compressed successfully with audio.');
-        audioCtx.close();
-        URL.revokeObjectURL(video.src);
-      };
-
-      await video.play();
-      recorder.start();
-
-      const renderLoop = () => {
-        if (video.ended || video.paused) {
-          recorder.stop();
-          return;
-        }
-        ctx?.drawImage(video, 0, 0, canvas.width, canvas.height);
-        setProgress(`${Math.round((video.currentTime / video.duration) * 100)}%`);
-        requestAnimationFrame(renderLoop);
-      };
-      
-      requestAnimationFrame(renderLoop);
-    } catch (error) {
-      console.error('[VideoCompressor] Error:', error);
-      toast.error(lang === 'ar' ? 'فشل ضغط الفيديو.' : 'Video compression failed.');
-      setProcessing(false);
-    }
-  };
-
   const compressFileZip = async () => {
     if (!file) return;
     try {
@@ -232,9 +130,6 @@ const FileCompressor = () => {
     try {
       if (tab === 'image' && file?.type.startsWith('image/')) {
         await compressImage();
-      } else if (tab === 'video' && file?.type.startsWith('video/')) {
-        await compressVideoNative();
-        return; // handle processing state in recorder
       } else {
         await compressFileZip();
       }
@@ -242,7 +137,7 @@ const FileCompressor = () => {
       console.error(error);
       toast.error('Compression failed');
     }
-    if (tab !== 'video') setProcessing(false);
+    setProcessing(false);
   };
 
   const download = () => {
@@ -256,8 +151,6 @@ const FileCompressor = () => {
     if (tab === 'image') {
       const outType = imageFormat === 'auto' ? file.type : imageFormat;
       ext = outType === 'image/jpeg' ? '.jpg' : outType === 'image/png' ? '.png' : '.webp';
-    } else if (tab === 'video') {
-      ext = videoFormat === 'video/mp4' ? '.mp4' : '.webm';
     } else {
       ext = '.zip';
     }
@@ -273,7 +166,6 @@ const FileCompressor = () => {
       <div className="flex gap-2 p-1.5 bg-secondary/50 rounded-2xl backdrop-blur-sm border border-border/50">
         {[
           { id: 'image', icon: ImageIcon, label: lang === 'ar' ? 'صورة' : 'Image' },
-          { id: 'video', icon: Video, label: lang === 'ar' ? 'فيديو' : 'Video' },
           { id: 'file', icon: FileText, label: lang === 'ar' ? 'ملف عام' : 'File' },
         ].map(t => (
           <button
@@ -302,13 +194,13 @@ const FileCompressor = () => {
                   {lang === 'ar' ? 'اضغط لاختيار أو اسحب الملف هنا' : 'Click to select or drag file here'}
                 </p>
                 <p className="text-xs text-muted-foreground/70 font-medium">
-                  {tab === 'image' ? 'PNG, JPG, WebP' : tab === 'video' ? 'MP4, WebM, MOV' : 'Any File (GZIP compression)'}
+                  {tab === 'image' ? 'PNG, JPG, WebP' : 'Any File (GZIP compression)'}
                 </p>
               </div>
               <input
                 type="file"
                 className="hidden"
-                accept={tab === 'image' ? 'image/*' : tab === 'video' ? 'video/*' : '*/*'}
+                accept={tab === 'image' ? 'image/*' : '*/*'}
                 onChange={e => e.target.files?.[0] && handleFile(e.target.files[0])}
               />
             </label>
@@ -318,11 +210,7 @@ const FileCompressor = () => {
             <div className="flex items-start justify-between bg-secondary/30 p-4 rounded-2xl border border-border">
               <div className="flex items-center gap-4">
                 {preview ? (
-                  tab === 'video' ? (
-                    <video src={preview} className="w-16 h-16 rounded-xl object-cover border border-border bg-black/5" />
-                  ) : (
-                    <img src={preview} alt="Preview" className="w-16 h-16 rounded-xl object-cover border border-border bg-black/5" />
-                  )
+                  <img src={preview} alt="Preview" className="w-16 h-16 rounded-xl object-cover border border-border bg-black/5" />
                 ) : (
                   <div className="w-16 h-16 rounded-xl border border-border bg-secondary flex items-center justify-center text-muted-foreground">
                     <FileText size={24} />

@@ -23,14 +23,22 @@ export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
 
   useEffect(() => {
     const root = document.documentElement;
+    const body = document.body;
+    
     // Remove all possible theme classes
     root.classList.remove('dark', 'theme-hacker', 'theme-win98', 'theme-neon-dark');
+    body.classList.remove('dark', 'theme-hacker', 'theme-win98', 'theme-neon-dark');
     
     if (theme === 'dark') {
       root.classList.add('dark');
+      body.classList.add('dark');
     } else if (theme !== 'light') {
       root.classList.add(`theme-${theme}`);
+      body.classList.add(`theme-${theme}`);
     }
+    
+    root.setAttribute('data-theme', theme);
+    body.setAttribute('data-theme', theme);
     
     localStorage.setItem('app-theme', theme);
   }, [theme]);

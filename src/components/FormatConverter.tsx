@@ -1,6 +1,6 @@
 import { useState, useRef } from 'react';
 import { useLang } from '@/contexts/LanguageContext';
-import { Download, X, Check, Image as ImageIcon, Music, FileText } from 'lucide-react';
+import { Download, X, Check, Image as ImageIcon, FileText } from 'lucide-react';
 import { toast } from 'sonner';
 import { jsPDF } from 'jspdf';
 
@@ -19,11 +19,10 @@ const DOC_FMTS = [
 
 const CATEGORIES = [
   { id: 'image', icon: ImageIcon, ar: 'تحويل الصور', en: 'Images', color: 'from-emerald-400 to-teal-500' },
-  { id: 'audio', icon: Music, ar: 'استخراج الصوت', en: 'Extract Audio', color: 'from-purple-400 to-violet-500' },
   { id: 'doc', icon: FileText, ar: 'المستندات', en: 'Documents', color: 'from-amber-400 to-orange-500' },
 ];
 
-type CatId = 'image' | 'audio' | 'doc';
+type CatId = 'image' | 'doc';
 
 const FormatConverter = () => {
   const { lang } = useLang();
@@ -80,96 +79,6 @@ const FormatConverter = () => {
           name = `converted_${file.name.replace(/\.[^.]+$/, '')}.${ext}`;
         }
         URL.revokeObjectURL(url);
-      } else if (category === 'audio') {
-        // STRICT: FileReader → ArrayBuffer → decodeAudioData → OfflineAudioContext → WAV Blob
-        // No MediaRecorder. No fallback that silences the file.
-        await new Promise<void>((resolve, reject) => {
-          const reader = new FileReader();
-          reader.onload = async (e) => {
-            try {
-              const arrayBuffer = e.target!.result as ArrayBuffer;
-              console.log('[Audio Extractor] ArrayBuffer loaded, size:', arrayBuffer.byteLength);
-
-              const AudioContextClass = window.AudioContext || (window as any).webkitAudioContext;
-              const audioCtx = new AudioContextClass();
-
-              let decodedBuffer: AudioBuffer;
-              try {
-                decodedBuffer = await audioCtx.decodeAudioData(arrayBuffer);
-                console.log('[Audio Extractor] Decoded OK — channels:', decodedBuffer.numberOfChannels, 'duration:', decodedBuffer.duration);
-              } catch (decodeErr) {
-                console.error('[Audio Extractor] decodeAudioData failed:', decodeErr);
-                toast(lang === 'ar' ? 'لا يدعم المتصفح قراءة هذا الملف. جرّب MP4 أو WebM.' : 'Browser cannot decode this file. Try MP4 or WebM.', { icon: '⚠️' });
-                reject(decodeErr);
-                return;
-              }
-
-              // Re-render via OfflineAudioContext to guarantee correct samples
-              const offlineCtx = new OfflineAudioContext(
-                decodedBuffer.numberOfChannels,
-                decodedBuffer.length,
-                decodedBuffer.sampleRate
-              );
-              const offlineSource = offlineCtx.createBufferSource();
-              offlineSource.buffer = decodedBuffer;
-              offlineSource.connect(offlineCtx.destination);
-              offlineSource.start(0);
-              const renderedBuffer = await offlineCtx.startRendering();
-              console.log('[Audio Extractor] OfflineAudioContext rendered OK');
-
-              // Encode renderedBuffer → WAV blob
-              const numCh = renderedBuffer.numberOfChannels;
-              const sampleRate = renderedBuffer.sampleRate;
-              const numFrames = renderedBuffer.length;
-              const wavDataLength = numFrames * numCh * 2; // 16-bit PCM
-              const wavBuffer = new ArrayBuffer(44 + wavDataLength);
-              const view = new DataView(wavBuffer);
-              let p = 0;
-              const w16 = (v: number) => { view.setUint16(p, v, true); p += 2; };
-              const w32 = (v: number) => { view.setUint32(p, v, true); p += 4; };
-
-              w32(0x46464952); // "RIFF"
-              w32(36 + wavDataLength);
-              w32(0x45564157); // "WAVE"
-              w32(0x20746d66); // "fmt "
-              w32(16);         // chunk size
-              w16(1);          // PCM
-              w16(numCh);
-              w32(sampleRate);
-              w32(sampleRate * numCh * 2);
-              w16(numCh * 2);
-              w16(16);
-              w32(0x61746164); // "data"
-              w32(wavDataLength);
-
-              // Interleave channels
-              const channels = Array.from({ length: numCh }, (_, i) => renderedBuffer.getChannelData(i));
-              for (let f = 0; f < numFrames; f++) {
-                for (let ch = 0; ch < numCh; ch++) {
-                  let s = channels[ch][f];
-                  s = Math.max(-1, Math.min(1, s));
-                  const pcm = s < 0 ? s * 0x8000 : s * 0x7FFF;
-                  view.setInt16(p, pcm | 0, true);
-                  p += 2;
-                }
-              }
-
-              blob = new Blob([wavBuffer], { type: 'audio/wav' });
-              name = `extracted_audio_${file.name.replace(/\.[^.]+$/, '')}.wav`;
-              setProgress('');
-              console.log('[Audio Extractor] WAV blob ready, size:', blob.size);
-              resolve();
-            } catch (err) {
-              console.error('[Audio Extractor] Unexpected error:', err);
-              reject(err);
-            }
-          };
-          reader.onerror = (err) => {
-            console.error('[Audio Extractor] FileReader error:', err);
-            reject(new Error('FileReader failed'));
-          };
-          reader.readAsArrayBuffer(file);
-        });
       } else if (category === 'doc') {
         // Mock doc conversion for client-side
         const sourceText = await file.text();

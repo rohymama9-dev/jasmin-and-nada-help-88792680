@@ -49,7 +49,12 @@ const HabitTracker = ({ onComplete }: HabitTrackerProps) => {
     } else {
       saveChecked([...checked, id]);
       addPoints(3); // Award 3 points per habit completion
-      toast.success(lang === 'ar' ? 'أحسنتِ! +٣ نقاط 🌟' : 'Great job! +3 points 🌟');
+      const savageMode = localStorage.getItem('savageMode') === 'true';
+      if (savageMode) {
+        toast.success(lang === 'ar' ? 'أخيراً فعلت شيئاً مفيداً! +٣ نقاط 🙄' : 'Finally did something useful! +3 points 🙄');
+      } else {
+        toast.success(lang === 'ar' ? 'أحسنتِ! +٣ نقاط 🌟' : 'Great job! +3 points 🌟');
+      }
       try {
         const today = new Date().toDateString();
         localStorage.setItem('combo-habit-today', today);

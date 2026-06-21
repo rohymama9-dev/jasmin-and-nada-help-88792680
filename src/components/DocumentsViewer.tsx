@@ -331,6 +331,11 @@ const DocumentsViewer = () => {
 
   return (
     <div dir={lang === 'ar' ? 'rtl' : 'ltr'} className="space-y-4">
+      {/* Disclaimer Alert */}
+      <div className="rounded-2xl border border-blue-300/50 bg-blue-50 dark:bg-blue-950/20 p-3 text-sm text-blue-900 dark:text-blue-200 text-center font-bold">
+        {lang === 'ar' ? 'ممتاز باللغة الإنجليزية، وما زال قيد التطوير لدعم اللغة العربية بشكل كامل.' : 'Excellent in English, still under development for full Arabic support.'}
+      </div>
+
       <div className="rounded-3xl bg-gradient-to-br from-fuchsia-600 via-purple-600 to-violet-600 p-5 text-white text-center">
         <div className="text-4xl mb-2">📚</div>
         <h2 className="text-xl font-extrabold">{t('عارض المستندات الذكي', 'Smart Document Viewer')}</h2>

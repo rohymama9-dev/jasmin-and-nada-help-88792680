@@ -69,6 +69,13 @@ const WaterTracker = ({ onDrink }: WaterTrackerProps) => {
       try { window.dispatchEvent(new StorageEvent('storage', { key: 'waterLog' } as any)); } catch {}
     } catch {}
     
+    const savageMode = localStorage.getItem('savageMode') === 'true';
+    if (savageMode) {
+      import('sonner').then(({ toast }) => toast(lang === 'ar' ? 'هل تنوي التحول إلى زبيبة جافة؟ اشرب المزيد! 🌵' : 'Trying to turn into a raisin? Drink more! 🌵'));
+    } else {
+      import('sonner').then(({ toast }) => toast.success(lang === 'ar' ? 'تمت إضافة كوب ماء 💧' : 'Water cup added 💧'));
+    }
+
     for (let i = 0; i < n; i++) onDrink();
   };
 
