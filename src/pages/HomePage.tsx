@@ -21,6 +21,8 @@ import TimeCapsule from '@/components/TimeCapsule';
 import StoryRings from '@/components/StoryRings';
 import LuckyWheel from '@/components/LuckyWheel';
 import ThemesShop, { applyThemeClass } from '@/components/ThemesShop';
+import MetaHub from '@/components/meta/MetaHub';
+import RPGTitleBadge from '@/components/meta/RPGTitleBadge';
 
 interface HomePageProps {
   points: number;
@@ -426,6 +428,7 @@ const HomePage = ({ points, addPoints }: HomePageProps) => {
             </div>
             <div className="flex flex-col items-end gap-2 shrink-0">
               <PointsBadge points={points} />
+              <RPGTitleBadge />
               {/* Monthly Wrapped trigger */}
               <button
                 onClick={() => setShowWrapped(true)}
