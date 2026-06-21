@@ -524,6 +524,9 @@ const HomePage = ({ points, addPoints }: HomePageProps) => {
 
       {/* ── iOS Install Hint (bottom, Apple devices only) ── */}
       <InstallBanner />
+
+      {/* Advanced Gamification Hub: Daily Magic Cards, Raid Boss, Gacha Store, Skill Tree, Deep Focus */}
+      <MetaHub />
     </div>
   );
 };
