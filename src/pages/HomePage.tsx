@@ -322,7 +322,7 @@ const HomePage = ({ points, addPoints }: HomePageProps) => {
             <div className="flex items-center gap-1">
               <div className="relative">
                 <button onClick={() => setShowThemeMenu(!showThemeMenu)} aria-label="Theme Selector"
-                  className="w-8 h-8 flex items-center justify-center rounded-full p-1 text-white hover:bg-white/10 transition-colors">
+                  className="w-10 h-10 rounded-full flex items-center justify-center shrink-0 p-2 overflow-hidden text-white hover:bg-white/10 transition-colors">
                   {theme === 'light' ? <Sun size={14} /> : theme === 'dark' ? <Moon size={14} /> : <Palette size={14} />}
                 </button>
                 {showThemeMenu && (
@@ -343,7 +343,7 @@ const HomePage = ({ points, addPoints }: HomePageProps) => {
                 )}
               </div>
               <button onClick={toggleLang} aria-label="Toggle Language"
-                className="w-8 h-8 flex items-center justify-center rounded-full p-1 text-white hover:bg-white/10 transition-colors">
+                className="w-10 h-10 rounded-full flex items-center justify-center shrink-0 p-2 overflow-hidden text-white hover:bg-white/10 transition-colors">
                 <Globe size={14} />
               </button>
               <button
@@ -356,7 +356,7 @@ const HomePage = ({ points, addPoints }: HomePageProps) => {
                   window.location.reload();
                 }}
                 aria-label={lang === 'ar' ? 'تسجيل الخروج' : 'Sign out'}
-                className="w-8 h-8 flex items-center justify-center rounded-full p-1 text-white hover:bg-red-500/50 transition-colors">
+                className="w-10 h-10 rounded-full flex items-center justify-center shrink-0 p-2 overflow-hidden text-white hover:bg-red-500/50 transition-colors">
                 <LogOut size={14} />
               </button>
             </div>

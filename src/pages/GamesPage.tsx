@@ -198,6 +198,22 @@ const GamesPage = ({ points, gamePoints, addPoints }: GamesPageProps) => {
   const awardGameOutcome = (result: number | boolean = true) => {
     const isPositive = typeof result === 'boolean' ? result : result > 0;
     addPoints(isPositive ? 2 : 1);
+
+    // Flash Challenge hook: if active challenge is Memory Game, award 70 bonus pts
+    if (isPositive && activeGame === 'memory') {
+      try {
+        const saved = localStorage.getItem('flash_challenge');
+        if (saved) {
+          const parsed = JSON.parse(saved);
+          const isMemoryChallenge = parsed.name === 'العب لعبة الذاكرة' || parsed.name === 'Play the Memory Game';
+          if (isMemoryChallenge && Date.now() < parsed.expires) {
+            addPoints(70);
+            localStorage.removeItem('flash_challenge');
+            toast.success(lang === 'ar' ? '🎉 أكملت تحدي الذاكرة! +70 نقطة إضافية' : '🎉 Memory Challenge complete! +70 bonus pts');
+          }
+        }
+      } catch {}
+    }
   };
 
   const handleUnlock = () => {

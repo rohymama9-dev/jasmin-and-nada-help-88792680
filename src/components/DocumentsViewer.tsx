@@ -362,15 +362,11 @@ const DocumentsViewer = () => {
             {t('يدعم DOCX و PDF و TXT و WebP وباقي الصور', 'Supports DOCX, PDF, TXT, WebP, and other images')}
           </p>
         </label>
-        <div className="rounded-2xl border border-amber-300/60 bg-amber-50 dark:bg-amber-950/20 p-3 text-sm text-amber-900 dark:text-amber-200 text-center mt-4">
-          ممتاز باللغة الإنجليزية، وما زال قيد التطوير لدعم اللغة العربية بشكل كامل.
-        </div>
+        <div className="bg-yellow-100 text-yellow-800 p-3 mt-4 rounded text-center font-bold">ممتاز باللغة الإنجليزية، وما زال قيد التطوير لدعم اللغة العربية بشكل كامل.</div>
       </div>
       ) : (
         <div className="space-y-4">
-          <div className="rounded-2xl border border-amber-300/60 bg-amber-50 dark:bg-amber-950/20 p-3 text-sm text-amber-900 dark:text-amber-200 text-center">
-            ممتاز باللغة الإنجليزية، وما زال قيد التطوير لدعم اللغة العربية بشكل كامل.
-          </div>
+          <div className="bg-yellow-100 text-yellow-800 p-3 rounded text-center font-bold">ممتاز باللغة الإنجليزية، وما زال قيد التطوير لدعم اللغة العربية بشكل كامل.</div>
           <div className="flex items-center gap-3 bg-secondary/60 rounded-2xl p-3 border border-border">
             <div className="w-14 h-14 rounded-xl bg-purple-100 dark:bg-purple-900/40 flex items-center justify-center text-2xl flex-shrink-0">
               {previewUrl ? <ImageIcon size={24} className="text-purple-600" /> : <FileText size={24} className="text-purple-600" />}
