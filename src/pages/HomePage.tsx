@@ -1,5 +1,5 @@
 import { useEffect, useState, useCallback, useMemo } from 'react';
-import { LogOut, Palette, CalendarDays, Skull } from 'lucide-react';
+import { LogOut, Palette, CalendarDays, Skull, Sun, Moon, Globe } from 'lucide-react';
 import { toast } from 'sonner';
 import { useLang } from '@/contexts/LanguageContext';
 import { useTheme } from '@/contexts/ThemeContext';
@@ -106,6 +106,17 @@ const HomePage = ({ points, addPoints }: HomePageProps) => {
   useEffect(() => {
     const generateFlashChallenge = () => {
       const now = Date.now();
+      
+      const today = new Date().toDateString();
+      const trackerStr = localStorage.getItem('flash_triggers');
+      const tracker = trackerStr ? JSON.parse(trackerStr) : { date: today, count: 0 };
+      if (tracker.date !== today) {
+        tracker.date = today;
+        tracker.count = 0;
+      }
+      
+      if (tracker.count >= 3) return;
+
       if (Math.random() < 0.3) {
         const challenges = [
           { ar: 'العب لعبة الذاكرة', en: 'Play the Memory Game' },
@@ -117,6 +128,20 @@ const HomePage = ({ points, addPoints }: HomePageProps) => {
         const challenge = { name: lang === 'ar' ? selected.ar : selected.en, expires };
         localStorage.setItem('flash_challenge', JSON.stringify(challenge));
         setFlashChallenge(challenge);
+
+        tracker.count++;
+        localStorage.setItem('flash_triggers', JSON.stringify(tracker));
+
+        if ('Notification' in window) {
+           const msg = lang === 'ar' ? 'تحدي سري جديد متاح الآن! اكسب 70 نقطة' : 'New secret challenge! Earn 70 pts';
+           if (Notification.permission === 'granted') {
+             new Notification(msg);
+           } else if (Notification.permission !== 'denied') {
+             Notification.requestPermission().then(permission => {
+               if (permission === 'granted') new Notification(msg);
+             });
+           }
+        }
       }
     };
 
@@ -294,11 +319,11 @@ const HomePage = ({ points, addPoints }: HomePageProps) => {
                 </span>
               </div>
             </div>
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-1">
               <div className="relative">
                 <button onClick={() => setShowThemeMenu(!showThemeMenu)} aria-label="Theme Selector"
-                  className="w-10 h-10 flex items-center justify-center p-2 rounded-full bg-secondary text-secondary-foreground hover:bg-secondary/80 transition-colors">
-                  <Palette size={14} />
+                  className="w-8 h-8 flex items-center justify-center rounded-full p-1 text-white hover:bg-white/10 transition-colors">
+                  {theme === 'light' ? <Sun size={14} /> : theme === 'dark' ? <Moon size={14} /> : <Palette size={14} />}
                 </button>
                 {showThemeMenu && (
                   <div className="absolute top-full mt-2 right-0 bg-background border border-border rounded-lg shadow-xl p-2 flex flex-col gap-1 z-50 min-w-[150px]">
@@ -317,9 +342,9 @@ const HomePage = ({ points, addPoints }: HomePageProps) => {
                   </div>
                 )}
               </div>
-              <button onClick={toggleLang}
-                className="w-10 h-10 flex items-center justify-center p-2 rounded-full bg-secondary text-secondary-foreground text-[10px] font-bold hover:bg-secondary/80 transition-colors">
-                {lang === 'ar' ? 'EN' : 'AR'}
+              <button onClick={toggleLang} aria-label="Toggle Language"
+                className="w-8 h-8 flex items-center justify-center rounded-full p-1 text-white hover:bg-white/10 transition-colors">
+                <Globe size={14} />
               </button>
               <button
                 onClick={() => {
@@ -331,7 +356,7 @@ const HomePage = ({ points, addPoints }: HomePageProps) => {
                   window.location.reload();
                 }}
                 aria-label={lang === 'ar' ? 'تسجيل الخروج' : 'Sign out'}
-                className="w-10 h-10 flex items-center justify-center p-2 rounded-full bg-secondary text-secondary-foreground hover:bg-destructive/10 hover:text-destructive transition-colors">
+                className="w-8 h-8 flex items-center justify-center rounded-full p-1 text-white hover:bg-red-500/50 transition-colors">
                 <LogOut size={14} />
               </button>
             </div>
@@ -382,11 +407,22 @@ const HomePage = ({ points, addPoints }: HomePageProps) => {
       {flashChallenge && (
         <div className="mx-1 p-3 rounded-2xl bg-gradient-to-r from-yellow-500 to-amber-500 text-white shadow-lg animate-bounce-in flex justify-between items-center relative overflow-hidden">
           <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/cubes.png')] opacity-10"></div>
-          <div className="relative z-10">
+          <div className="relative z-10 flex-1">
             <p className="text-[10px] font-black uppercase tracking-wider text-yellow-100">{lang === 'ar' ? '⚡ تحدي مفاجئ!' : '⚡ Flash Challenge!'}</p>
             <p className="font-bold text-sm leading-tight mt-0.5">{flashChallenge.name}</p>
+            <button 
+              onClick={() => {
+                 addPoints(70);
+                 localStorage.removeItem('flash_challenge');
+                 setFlashChallenge(null);
+                 toast.success(lang === 'ar' ? 'أنجزت التحدي! +70 نقطة 🎉' : 'Challenge completed! +70 points 🎉');
+              }}
+              className="mt-2 bg-white text-amber-600 text-[10px] font-bold px-3 py-1 rounded-full hover:bg-yellow-50 transition-colors shadow-sm"
+            >
+              {lang === 'ar' ? 'أكملت التحدي (70+ نقطة)' : 'Completed (+70 pts)'}
+            </button>
           </div>
-          <div className="relative z-10 shrink-0 bg-black/20 px-2 py-1 rounded-lg text-center">
+          <div className="relative z-10 shrink-0 bg-black/20 px-2 py-1 rounded-lg text-center ml-2">
             <p className="text-[9px] uppercase font-bold text-yellow-100">{lang === 'ar' ? 'ينتهي في' : 'Ends in'}</p>
             <p className="text-sm font-black font-mono">{flashTimeLeft}</p>
           </div>

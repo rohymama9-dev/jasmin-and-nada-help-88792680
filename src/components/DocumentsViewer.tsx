@@ -331,11 +331,7 @@ const DocumentsViewer = () => {
 
   return (
     <div dir={lang === 'ar' ? 'rtl' : 'ltr'} className="space-y-4">
-      {/* Disclaimer Alert */}
-      <div className="rounded-2xl border border-blue-300/50 bg-blue-50 dark:bg-blue-950/20 p-3 text-sm text-blue-900 dark:text-blue-200 text-center font-bold">
-        ممتاز باللغة الإنجليزية، وما زال قيد التطوير لدعم اللغة العربية بشكل كامل.
-      </div>
-
+      {/* Top Banner removed per user request */}
       <div className="rounded-3xl bg-gradient-to-br from-fuchsia-600 via-purple-600 to-violet-600 p-5 text-white text-center">
         <div className="text-4xl mb-2">📚</div>
         <h2 className="text-xl font-extrabold">{t('عارض المستندات الذكي', 'Smart Document Viewer')}</h2>
@@ -345,8 +341,9 @@ const DocumentsViewer = () => {
       </div>
 
       {!docFile ? (
-        <label className="relative flex flex-col items-center justify-center rounded-3xl border-2 border-dashed border-purple-300 dark:border-purple-700 bg-purple-50/50 dark:bg-purple-950/20 p-10 cursor-pointer hover:bg-purple-100/40 transition-colors">
-          <input
+        <div>
+          <label className="relative flex flex-col items-center justify-center rounded-3xl border-2 border-dashed border-purple-300 dark:border-purple-700 bg-purple-50/50 dark:bg-purple-950/20 p-10 cursor-pointer hover:bg-purple-100/40 transition-colors">
+            <input
             type="file"
             accept={ACCEPTED_FILES}
             className="absolute inset-0 opacity-0 w-full h-full cursor-pointer"
@@ -365,8 +362,15 @@ const DocumentsViewer = () => {
             {t('يدعم DOCX و PDF و TXT و WebP وباقي الصور', 'Supports DOCX, PDF, TXT, WebP, and other images')}
           </p>
         </label>
+        <div className="rounded-2xl border border-amber-300/60 bg-amber-50 dark:bg-amber-950/20 p-3 text-sm text-amber-900 dark:text-amber-200 text-center mt-4">
+          ممتاز باللغة الإنجليزية، وما زال قيد التطوير لدعم اللغة العربية بشكل كامل.
+        </div>
+      </div>
       ) : (
         <div className="space-y-4">
+          <div className="rounded-2xl border border-amber-300/60 bg-amber-50 dark:bg-amber-950/20 p-3 text-sm text-amber-900 dark:text-amber-200 text-center">
+            ممتاز باللغة الإنجليزية، وما زال قيد التطوير لدعم اللغة العربية بشكل كامل.
+          </div>
           <div className="flex items-center gap-3 bg-secondary/60 rounded-2xl p-3 border border-border">
             <div className="w-14 h-14 rounded-xl bg-purple-100 dark:bg-purple-900/40 flex items-center justify-center text-2xl flex-shrink-0">
               {previewUrl ? <ImageIcon size={24} className="text-purple-600" /> : <FileText size={24} className="text-purple-600" />}
