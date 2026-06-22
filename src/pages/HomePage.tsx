@@ -363,12 +363,10 @@ const HomePage = ({ points, addPoints }: HomePageProps) => {
                 <span className="px-2 py-0.5 rounded-full bg-white/20 text-white text-[10px] font-bold border border-white/30">
                   {getRPGTitle(points)}
                 </span>
-                {streak >= 2 && (
-                  <div className="flex items-center gap-1 px-2 py-0.5 rounded-full bg-orange-500/20 text-orange-100 text-[10px] font-bold border border-orange-500/30" title={lang === 'ar' ? 'سلسلة الحضور' : 'Visit Streak'}>
-                    <span className="text-sm leading-none">🔥</span>
-                    <span>{streak}</span>
-                  </div>
-                )}
+                <div className="flex items-center gap-1 px-2 py-0.5 rounded-full bg-orange-500/20 text-orange-100 text-[10px] font-bold border border-orange-500/30" title={lang === 'ar' ? 'سلسلة الحضور (هدف 14 يوم)' : 'Visit Streak (14d goal)'}>
+                  <span className="text-sm leading-none">🔥</span>
+                  <span>{streak}/14</span>
+                </div>
                 <span className="px-2 py-0.5 rounded-full bg-success/20 text-success text-[10px] font-bold border border-success/30">
                   {lang === 'ar' ? '✅ تم تسجيل الحضور' : '✅ Checked In'}
                 </span>
