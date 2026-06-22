@@ -2,9 +2,13 @@ import { useState, useEffect } from 'react';
 import { useLang } from '@/contexts/LanguageContext';
 import { toast } from 'sonner';
 import { X, Lock, CheckCircle2, Paintbrush } from 'lucide-react';
+import { getLevel, ensureLevelThemes, THEME_UNLOCK_LEVELS } from '@/lib/appStore';
 
 export const applyThemeClass = (themeClass: string) => {
-  document.documentElement.classList.remove('theme-90s', 'theme-space', 'theme-nature');
+  document.documentElement.classList.remove(
+    'theme-90s', 'theme-space', 'theme-nature',
+    'theme-sakura', 'theme-galaxy', 'theme-ocean', 'theme-forest', 'theme-gold',
+  );
   if (themeClass) {
     document.documentElement.classList.add(themeClass);
   }
@@ -48,8 +52,17 @@ const THEMES = [
     className: 'theme-nature',
     isSecret: true,
     secretCondition: () => localStorage.getItem('secret_quest_nature') === 'true',
-  }
-];
+  },
+  // Real themes — unlock by level
+  { id: 'sakura',  nameAr: 'ثيم الساكورا 🌸',  nameEn: 'Sakura 🌸',  price: 0, className: 'theme-sakura', levelGate: 2 },
+  { id: 'ocean',   nameAr: 'ثيم المحيط 🌊',    nameEn: 'Ocean 🌊',   price: 0, className: 'theme-ocean',  levelGate: 3 },
+  { id: 'forest',  nameAr: 'ثيم الغابة 🌳',    nameEn: 'Forest 🌳',  price: 0, className: 'theme-forest', levelGate: 4 },
+  { id: 'galaxy',  nameAr: 'ثيم المجرّة 🌌',   nameEn: 'Galaxy 🌌',  price: 0, className: 'theme-galaxy', levelGate: 6 },
+  { id: 'gold',    nameAr: 'ثيم الذهب 👑',     nameEn: 'Gold 👑',    price: 0, className: 'theme-gold',   levelGate: 8 },
+] as Array<{
+  id: string; nameAr: string; nameEn: string; price: number; className: string;
+  isSecret?: boolean; secretCondition?: () => boolean; levelGate?: number;
+}>;
 
 const ThemesShop = ({ onClose, points, addPoints }: ThemesShopProps) => {
   const { lang } = useLang();
@@ -67,6 +80,7 @@ const ThemesShop = ({ onClose, points, addPoints }: ThemesShopProps) => {
   });
 
   useEffect(() => {
+    ensureLevelThemes();
     const newlyUnlocked = [...unlockedThemes];
     let changed = false;
 
@@ -76,6 +90,10 @@ const ThemesShop = ({ onClose, points, addPoints }: ThemesShopProps) => {
           newlyUnlocked.push(t.id);
           changed = true;
         }
+      }
+      if (t.levelGate && getLevel() >= t.levelGate && !newlyUnlocked.includes(t.id)) {
+        newlyUnlocked.push(t.id);
+        changed = true;
       }
     });
 
@@ -132,6 +150,7 @@ const ThemesShop = ({ onClose, points, addPoints }: ThemesShopProps) => {
 
             const isUnlocked = unlockedThemes.includes(t.id);
             const isSelected = selectedTheme === t.id;
+            const levelLocked = !!t.levelGate && !isUnlocked;
 
             return (
               <div 
@@ -146,9 +165,14 @@ const ThemesShop = ({ onClose, points, addPoints }: ThemesShopProps) => {
                   <h3 className="font-bold text-sm text-slate-800 dark:text-white">
                     {lang === 'ar' ? t.nameAr : t.nameEn}
                   </h3>
-                  {!isUnlocked && (
+                  {!isUnlocked && !t.levelGate && (
                     <p className="text-xs text-amber-600 dark:text-amber-400 font-semibold mt-1">
                       {t.price} {lang === 'ar' ? 'نقطة' : 'pts'}
+                    </p>
+                  )}
+                  {levelLocked && (
+                    <p className="text-xs text-indigo-600 dark:text-indigo-400 font-semibold mt-1">
+                      {lang === 'ar' ? `🔒 افتح بالمستوى ${t.levelGate}` : `🔒 Unlocks at Level ${t.levelGate}`}
                     </p>
                   )}
                   {t.isSecret && (
@@ -171,6 +195,10 @@ const ThemesShop = ({ onClose, points, addPoints }: ThemesShopProps) => {
                     >
                       {lang === 'ar' ? 'اختيار' : 'Select'}
                     </button>
+                  ) : levelLocked ? (
+                    <div className="flex items-center gap-1 px-3 py-1.5 rounded-full bg-slate-200 dark:bg-slate-700 text-slate-500 text-xs font-bold">
+                      <Lock size={12} /> {lang === 'ar' ? 'مقفل' : 'Locked'}
+                    </div>
                   ) : (
                     <button
                       onClick={() => handleBuy(t.id, t.price)}
