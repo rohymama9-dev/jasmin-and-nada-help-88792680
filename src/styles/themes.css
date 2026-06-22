@@ -85,3 +85,110 @@
 .theme-neon-dark * {
   text-shadow: 0 0 2px rgba(255, 255, 255, 0.2);
 }
+
+/* ===================== Real Unlockable Themes (level-gated) ===================== */
+/* Sakura — soft pink */
+.theme-sakura {
+  --background: 340 80% 97%;
+  --foreground: 340 35% 20%;
+  --primary: 335 80% 60%;
+  --primary-foreground: 0 0% 100%;
+  --secondary: 340 70% 92%;
+  --secondary-foreground: 340 35% 25%;
+  --muted: 340 50% 94%;
+  --muted-foreground: 340 25% 40%;
+  --accent: 320 90% 75%;
+  --accent-foreground: 0 0% 100%;
+  --card: 0 0% 100%;
+  --card-foreground: 340 35% 20%;
+  --border: 340 50% 85%;
+  --input: 340 50% 90%;
+  --ring: 335 80% 60%;
+}
+.theme-sakura body { background: linear-gradient(135deg,#fff1f6 0%,#ffe0ec 50%,#ffd0e0 100%) fixed; }
+
+/* Galaxy — deep purple/indigo */
+.theme-galaxy {
+  --background: 250 50% 8%;
+  --foreground: 260 30% 95%;
+  --primary: 270 90% 65%;
+  --primary-foreground: 0 0% 100%;
+  --secondary: 250 40% 18%;
+  --secondary-foreground: 260 30% 92%;
+  --muted: 250 30% 22%;
+  --muted-foreground: 260 20% 75%;
+  --accent: 290 80% 60%;
+  --accent-foreground: 0 0% 100%;
+  --card: 250 45% 12%;
+  --card-foreground: 260 30% 95%;
+  --border: 270 40% 30%;
+  --input: 250 40% 18%;
+  --ring: 270 90% 65%;
+}
+.theme-galaxy body {
+  background:
+    radial-gradient(circle at 20% 10%, rgba(168,85,247,.25), transparent 40%),
+    radial-gradient(circle at 80% 70%, rgba(99,102,241,.25), transparent 50%),
+    #0b0820 fixed;
+}
+
+/* Ocean — deep blue */
+.theme-ocean {
+  --background: 205 70% 95%;
+  --foreground: 210 60% 15%;
+  --primary: 200 90% 45%;
+  --primary-foreground: 0 0% 100%;
+  --secondary: 200 60% 88%;
+  --secondary-foreground: 210 60% 20%;
+  --muted: 200 40% 92%;
+  --muted-foreground: 210 40% 40%;
+  --accent: 185 80% 50%;
+  --accent-foreground: 0 0% 100%;
+  --card: 0 0% 100%;
+  --card-foreground: 210 60% 15%;
+  --border: 200 50% 80%;
+  --input: 200 50% 88%;
+  --ring: 200 90% 45%;
+}
+.theme-ocean body { background: linear-gradient(180deg,#e0f3ff 0%,#b8e0ff 60%,#7cc3f5 100%) fixed; }
+
+/* Forest — green/earth */
+.theme-forest {
+  --background: 130 35% 95%;
+  --foreground: 140 40% 15%;
+  --primary: 140 55% 35%;
+  --primary-foreground: 0 0% 100%;
+  --secondary: 130 35% 88%;
+  --secondary-foreground: 140 40% 20%;
+  --muted: 130 25% 92%;
+  --muted-foreground: 140 25% 40%;
+  --accent: 90 50% 45%;
+  --accent-foreground: 0 0% 100%;
+  --card: 0 0% 100%;
+  --card-foreground: 140 40% 15%;
+  --border: 130 30% 80%;
+  --input: 130 30% 88%;
+  --ring: 140 55% 35%;
+}
+.theme-forest body { background: linear-gradient(135deg,#e8f5e9 0%,#c8e6c9 50%,#a5d6a7 100%) fixed; }
+
+/* Gold — luxury */
+.theme-gold {
+  --background: 45 80% 96%;
+  --foreground: 30 60% 15%;
+  --primary: 40 90% 50%;
+  --primary-foreground: 30 60% 15%;
+  --secondary: 45 70% 88%;
+  --secondary-foreground: 30 60% 20%;
+  --muted: 45 60% 92%;
+  --muted-foreground: 30 40% 35%;
+  --accent: 35 95% 55%;
+  --accent-foreground: 30 60% 15%;
+  --card: 0 0% 100%;
+  --card-foreground: 30 60% 15%;
+  --border: 40 60% 75%;
+  --input: 45 70% 88%;
+  --ring: 40 90% 50%;
+}
+.theme-gold body { background: linear-gradient(135deg,#fff8e1 0%,#ffe7a8 50%,#f5c34a 100%) fixed; }
+.theme-gold .bg-card { box-shadow: 0 4px 14px rgba(218,165,32,.25); }
