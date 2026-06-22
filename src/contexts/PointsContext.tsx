@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import { lsGet, lsSet } from '@/lib/userStorage';
+import { addXP as storeAddXP } from '@/lib/appStore';
 
 type LeaderboardSection = 'games' | 'education';
 
@@ -50,6 +51,11 @@ export const PointsProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       lsSet(POINTS_BASE, String(next));
       return next;
     });
+
+    // Mirror into global XP (+50% of points awarded).
+    if (amount > 0) {
+      try { storeAddXP(Math.ceil(amount * 0.5)); } catch {}
+    }
 
     if (section === 'games') {
       setGamesPoints(prev => {
