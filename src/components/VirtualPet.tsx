@@ -330,6 +330,14 @@ export default function VirtualPet() {
 
   const dinoEmoji = DINO_EMOJIS[(petData.dinoType || 0) % DINO_EMOJIS.length];
   const dinoHue = HUE_ROTATES[(petData.dinoType || 0) % HUE_ROTATES.length];
+  // Evolution stages by Dino XP: 0-Baby, 20-Teen, 60-Adult, 150-Mythic
+  const dinoXp = getDinoXP();
+  const evoStage = dinoXp >= 150 ? 4 : dinoXp >= 60 ? 3 : dinoXp >= 20 ? 2 : 1;
+  const evoScale = [1, 1, 1.15, 1.3, 1.5][evoStage] || 1;
+  const evoLabel = ['', 'Baby', 'Teen', 'Adult', 'Mythic'][evoStage];
+  const evoAura = evoStage >= 4 ? 'drop-shadow-[0_0_18px_rgba(255,215,0,0.85)]'
+                : evoStage >= 3 ? 'drop-shadow-[0_0_10px_rgba(168,85,247,0.7)]'
+                : evoStage >= 2 ? 'drop-shadow-[0_0_6px_rgba(56,189,248,0.6)]' : '';
 
   return (
     <div className="mx-1 space-y-3">
@@ -441,13 +449,19 @@ export default function VirtualPet() {
 
             {petData.state === 'hatched' && (
                <div 
-                 className={`relative text-6xl cursor-pointer drop-shadow-xl transition-transform ${petData.isSick ? 'grayscale opacity-70' : ''} ${dinoAction === 'walking' || dinoAction === 'warming' ? 'animate-[bounce_1s_infinite]' : 'hover:scale-110 active:scale-95'}`} 
+                 className={`relative text-6xl cursor-pointer drop-shadow-xl transition-transform ${evoAura} ${petData.isSick ? 'grayscale opacity-70' : ''} ${dinoAction === 'walking' || dinoAction === 'warming' ? 'animate-[bounce_1s_infinite]' : 'hover:scale-110 active:scale-95'}`} 
                  onClick={handleDinoClick}
-                 style={{ filter: petData.isSick ? undefined : `hue-rotate(${dinoHue})` }}
+                 style={{ filter: petData.isSick ? undefined : `hue-rotate(${dinoHue})`, transform: `scale(${evoScale})`, transformOrigin: 'bottom center' }}
+                 title={evoLabel ? `${evoLabel} (Dino XP ${dinoXp})` : undefined}
                >
                  {petData.isSick && <div className="absolute -top-2 -right-2 bg-purple-600 text-white text-[9px] font-bold px-1.5 py-0.5 rounded-full z-30 shadow-md animate-pulse">{t('مريض!', 'Sick!')}</div>}
                  {(!petData.isSick && !fireLit) && <Snowflake size={16} className="absolute -top-2 -left-2 text-blue-500 animate-pulse z-30 drop-shadow-sm" />}
                  {(!petData.isSick && petData.petHunger < 30) && <div className="absolute -top-2 right-2 bg-red-500 text-white text-[9px] font-bold px-1.5 py-0.5 rounded-full z-30 shadow-md animate-pulse">{t('جائع!', 'Hungry!')}</div>}
+                 {evoStage >= 2 && (
+                   <div className="absolute -top-3 left-1/2 -translate-x-1/2 bg-white/90 dark:bg-slate-900/90 text-[8px] font-bold px-1.5 py-0.5 rounded-full border border-white/60 shadow z-30">
+                     {evoLabel}
+                   </div>
+                 )}
                  {petData.isSick ? '🤒' : dinoEmoji}
                </div>
             )}
