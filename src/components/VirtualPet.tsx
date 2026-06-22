@@ -3,6 +3,7 @@ import { useLang } from '@/contexts/LanguageContext';
 import { usePoints } from '@/hooks/usePoints';
 import { Sparkles, Heart, Droplets, Sprout, Award, Wheat, Snowflake } from 'lucide-react';
 import { toast } from 'sonner';
+import { addDinoXP, getDinoXP } from '@/lib/appStore';
 
 type PetState = 'egg_selection' | 'incubating' | 'hatched';
 
@@ -253,6 +254,7 @@ export default function VirtualPet() {
     if (petData.plantStage < 3) { toast(t('النبتة لم تنضج بعد', 'Plant not ready yet')); return; }
     if (petData.isSick) { toast.error(t('الدينو مريض، اعلجه أولاً', 'Dino sick, cure first')); return; }
     setPetData(prev => ({ ...prev, plantStage: 0, petHunger: Math.min(100, prev.petHunger + 50) }));
+    addDinoXP(5);
     toast.success(t('يم يم! الدينو يأكل النبتة الطازجة 🌿', 'Yum! Dino ate fresh plant 🌿'));
     moveDinoToPlant('🌿');
   };
@@ -262,6 +264,7 @@ export default function VirtualPet() {
     if (petData.seedsOwned <= 0) { toast.error(t('لا توجد بذور', 'No seeds')); return; }
     if (petData.petHunger >= 100) { toast(t('الدينو شبعان!', 'Dino is full!')); return; }
     setPetData(prev => ({ ...prev, seedsOwned: prev.seedsOwned - 1, petHunger: Math.min(100, prev.petHunger + 25) }));
+    addDinoXP(5);
     toast.success(t('يم يم! 🌱', 'Yum yum! 🌱'));
     moveDinoToPlant('🌱');
   };
