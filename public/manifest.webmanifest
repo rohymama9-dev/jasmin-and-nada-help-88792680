@@ -1,0 +1,16 @@
+{
+  "name": "Nada Helps Hub",
+  "short_name": "Nada Hub",
+  "description": "Daily wellness, Quran, learning and games — installable on mobile.",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#0f172a",
+  "theme_color": "#0f172a",
+  "lang": "ar",
+  "dir": "rtl",
+  "icons": [
+    { "src": "/favicon.ico", "sizes": "any", "type": "image/x-icon" }
+  ]
+}
