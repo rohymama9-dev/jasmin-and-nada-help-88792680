@@ -1,1 +1,11 @@
 export { default as HealthHub } from './HealthHub';
+export { default as DietTracker } from '@/components/DietTracker';
+export { default as FastingTimer } from '@/components/FastingTimer';
+export { default as WalkingTimer } from '@/components/WalkingTimer';
+export { default as SleepTracker } from '@/components/SleepTracker';
+export { default as WaterTracker } from '@/components/WaterTracker';
+export { default as MedicationReminder } from '@/components/MedicationReminder';
+export { default as HealthProfileSetup } from '@/components/HealthProfileSetup';
+export { default as OnboardingScreen } from '@/components/OnboardingScreen';
+export { EXERCISE_FILES, ACTIVITY_LEVELS, getWorkoutConfig } from '@/data/exercises';
+export type { Exercise, ExerciseCategory, WorkoutStats, ExerciseType, WorkoutPhase } from '@/data/exercises';
